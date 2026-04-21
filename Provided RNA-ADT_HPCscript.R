@@ -7,7 +7,7 @@
 ################ SPECIFY INPUT  AND OUTPUT ###########################
 ######################################################################
 
-setwd('/srv/data/10x/ABC/ABC001/')
+setwd('/Users/samue/Desktop/Stage VIB/RawData/SAM2')
 output.dir <- "results/"
 samplename <- "ABC001"
 experiment <- samplename
