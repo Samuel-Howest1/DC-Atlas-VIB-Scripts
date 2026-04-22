@@ -238,5 +238,4 @@ all.genes <- rownames(pbmc)
 seuratObj <- ScaleData(seuratObj, features = all.genes)
 
 seuratObj <- RunPCA(seuratObj, features = VariableFeatures(object = seuratObj))
-
 ```
