@@ -1,26 +1,42 @@
+---
+title: "Pre-processing"
+output: html_document
+---
 
-## Pre-processing of CITE-seq data
-## This Script is the first and will be used to pre-process SAM2 Provided data
+Pre-processing of CITE-seq data
+This Script is the first and will be used to pre-process SAM2 Provided data
+
+```{r}
 
 ###############################################
 #LOADING PACKAGE
 ###############################################
 
-library("")
+library("renv")
 library("tidyverse")
 library("Seurat")
-library("SingleCellExperiment") #Niet in Cran
-library("scater") # Niet in CRAN
-library("scran") # Niet in CRAN
+library("SingleCellExperiment")
+library("scater")
+#library("scran") Bluster Dependencie doesnt install correctly
 library('fields')
 #library('modes') #Niet in CRan
 library("dplyr")
 library("stringr")
 library("readr")
 
+
+```
+
+
+
+```{r}
 #############################################
 #RNA
 ############################################
 
 rawData <- Read10X_h5("../Stage VIB/RawData/SAM2/filtered_feature_bc_matrix/")
 rawDataRNA <- as.matrix(rawData$`Gene Expression`)
+
+
+
+```
