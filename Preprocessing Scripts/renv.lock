@@ -5,6 +5,26 @@
       {
         "Name": "CRAN",
         "URL": "https://packagemanager.posit.co/cran/latest"
+      },
+      {
+        "Name": "BioCsoft",
+        "URL": "https://bioconductor.org/packages/3.22/bioc"
+      },
+      {
+        "Name": "BioCann",
+        "URL": "https://bioconductor.org/packages/3.22/data/annotation"
+      },
+      {
+        "Name": "BioCexp",
+        "URL": "https://bioconductor.org/packages/3.22/data/experiment"
+      },
+      {
+        "Name": "BioCworkflows",
+        "URL": "https://bioconductor.org/packages/3.22/workflows"
+      },
+      {
+        "Name": "BioCbooks",
+        "URL": "https://bioconductor.org/packages/3.22/books"
       }
     ]
   },
@@ -2061,6 +2081,65 @@
       "Author": "Hadley Wickham [aut], Kirill Müller [cre], RStudio [cph, fnd]",
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
       "Repository": "CRAN"
+    },
+    "bluster": {
+      "Package": "bluster",
+      "Version": "1.21.1",
+      "Source": "Bioconductor",
+      "Date": "2026-03-05",
+      "Title": "Clustering Algorithms for Bioconductor",
+      "Description": "Wraps common clustering algorithms in an easily extended S4 framework. Backends are implemented for hierarchical, k-means and graph-based clustering. Several utilities are also provided to compare and evaluate clustering results.",
+      "Authors@R": "c( person(\"Aaron\", \"Lun\", role = c(\"aut\", \"cre\"), email = \"infinite.monkeys.with.keyboards@gmail.com\"), person(\"Stephanie\", \"Hicks\", role=\"ctb\"), person(\"Basil\", \"Courbayre\", role=\"ctb\"), person(\"Tuomas\", \"Borman\", role=\"ctb\"), person(\"Leo\", \"Lahti\", role=\"ctb\") )",
+      "Imports": [
+        "stats",
+        "methods",
+        "utils",
+        "cluster",
+        "Matrix",
+        "Rcpp",
+        "igraph",
+        "S4Vectors",
+        "BiocParallel",
+        "BiocNeighbors"
+      ],
+      "Suggests": [
+        "knitr",
+        "rmarkdown",
+        "testthat",
+        "BiocStyle",
+        "dynamicTreeCut",
+        "scRNAseq",
+        "scuttle",
+        "scater",
+        "scran",
+        "pheatmap",
+        "viridis",
+        "mbkmeans",
+        "kohonen",
+        "apcluster",
+        "DirichletMultinomial",
+        "vegan",
+        "fastcluster"
+      ],
+      "biocViews": "ImmunoOncology, Software, GeneExpression, Transcriptomics, SingleCell, Clustering",
+      "LinkingTo": [
+        "Rcpp",
+        "assorthead"
+      ],
+      "Collate": "AllClasses.R AllGenerics.R AgnesParam.R approxSilhouette.R bluster-package.R DbscanParam.R DianaParam.R AffinityParam.R BlusterParam.R bootstrapStability.R ClaraParam.R clusterRMSD.R clusterSweep.R compareClusterings.R DmmParam.R FixedNumberParam.R HclustParam.R HierarchicalParam.R KmeansParam.R linkClusters.R makeSNNGraph.R MbkmeansParam.R mergeCommunities.R neighborPurity.R nestedClusters.R NNGraphParam.R pairwiseModularity.R pairwiseRand.R PamParam.R RcppExports.R SomParam.R TwoStepParam.R utils.R",
+      "License": "GPL-3",
+      "NeedsCompilation": "yes",
+      "VignetteBuilder": "knitr",
+      "SystemRequirements": "C++17",
+      "RoxygenNote": "7.3.3",
+      "Encoding": "UTF-8",
+      "Config/pak/sysreqs": "libglpk-dev libxml2-dev",
+      "Repository": "https://bioc.r-universe.dev",
+      "RemoteUrl": "https://github.com/bioc/bluster",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "a8a23b66fb061d33b836f4a1cf89406ea84052fb",
+      "Author": "Aaron Lun [aut, cre], Stephanie Hicks [ctb], Basil Courbayre [ctb], Tuomas Borman [ctb], Leo Lahti [ctb]",
+      "Maintainer": "Aaron Lun <infinite.monkeys.with.keyboards@gmail.com>"
     },
     "brew": {
       "Package": "brew",

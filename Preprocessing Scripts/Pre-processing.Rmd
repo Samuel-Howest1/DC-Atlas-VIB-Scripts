@@ -3,8 +3,7 @@ title: "Pre-processing"
 output: html_document
 ---
 
-Pre-processing of CITE-seq data
-This Script is the first and will be used to pre-process SAM2 Provided data
+Pre-processing of CITE-seq data This Script is the first and will be used to pre-process SAM2 Provided data
 
 ```{r}
 
@@ -27,16 +26,29 @@ library("readr")
 
 ```
 
-
-
 ```{r}
 #############################################
 #RNA
 ############################################
-
-rawData <- Read10X_h5("../Stage VIB/RawData/SAM2/filtered_feature_bc_matrix/")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- as.matrix(rawData$`Gene Expression`)
 
+```
+
+
+```{r}
+
+sce<-SingleCellExperiment(list(counts=rawDataRNA))
+is.mito <- grepl("^MT-", rownames(sce), ignore.case = TRUE)
+sce<- addPerCellQC(sce, subsets=list(Mito=is.mito))
+metaData<-data.frame("staticNr"=colnames(rawDataRNA), 
+                     "nGene"=sce$detected,
+                     "nUMI"=sce$sum,
+                     "percent.mito"=sce$subsets_Mito_percent, 
+                     stringsAsFactors = F)
+rownames(metaData)<-metaData$staticNr
+metaData$staticNr<-1
 
 
 ```
