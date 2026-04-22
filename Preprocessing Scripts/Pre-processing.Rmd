@@ -65,20 +65,19 @@ metaData$staticNr<-1
 
 
 ```{r}
-
 # FILTERING Test
 
 sampleName<-"GSM_2677817"
 batch <- rep(sampleName, colnames(rawDataRNA) %>% length())
 
-# Setting cut offs
+# Setting cut offs (Increased the cutoffs, Still Increase?)
 # Nummber of genes
-nmad_low_feature<-5
-nmad_high_feature<-5
+nmad_low_feature<-3
+nmad_high_feature<-3
 
 # Total counts all gene in a cell
-nmad_low_UMI<-5
-nmad_high_UMI<-5
+nmad_low_UMI<-3
+nmad_high_UMI<-3
 
 # Precentage Mitchondrial gene
 nmad_high_mito<-10
@@ -107,83 +106,107 @@ metaData$nUMI.drop=libsize.drop
 metaData$mito.drop=mito.drop
 metaData$final.drop=feature.drop | libsize.drop | mito.drop
 
-
-
-```
-
-#Scatter plot Before filtering
-```{r}
-
-#mad(sce$detected, nmads=5)
-
-MitoPrecentage <- sce$subsets_Mito_percent
-
-ggplot(metaData,aes(x=nUMI, y=nGene)) + 
-  geom_point(aes(colour = MitoPrecentage ))+
-  scale_colour_gradientn(colours=terrain.colors(10))+
-  
-  
-  geom_vline(xintercept = 1000,linetype="dotted", 
-                color = "blue", size=1.5)+
-   geom_vline(xintercept = 10000,linetype="dotted", 
-                color = "red", size=1.5)+
-geom_hline(yintercept = 1000,linetype="dotted", 
-                color = "blue", size=1.5)+
-   geom_hline(yintercept = 5000,linetype="dotted", 
-                color = "red", size=1.5)
-
-
-```
 #Removing the outliers
-```{r}
-
-#Remove the data out of sce
+#The filted data is put in a seprate object
 scef <- sce[,!(libsize.drop | feature.drop | mito.drop)]
 
-```
-
-#Scatter plot after filtering
-
-```{r}
-
-metaDataF <- merge(
-  metaData,
-  scef$,
-  by = ""
-)
-``` 
-
-```{r}
-
-#mad(sce$detected, nmads=5)
-
-MitoPrecentageF <- scef$subsets_Mito_percent
-MetaRownames <- metaData$percent.mito == MitoPrecentageF
-
-# Metadata rows have to be equel to MitoPrecentage
-# Creating a Filter Metadata for the showcase
-metaDataF<-data.frame("staticNr"=rownames(metaData[MetaRownames,]),
+# Creating a Filter Metadata for the plots
+metaDataF<-data.frame("staticNr"=colnames(scef),
                      "nGene"=scef$detected,
                      "nUMI"=scef$sum,
                      "percent.mito"=scef$subsets_Mito_percent, 
                      stringsAsFactors = F)
-#Rownames fixen
 rownames(metaDataF)<-metaDataF$staticNr
 metaDataF$staticNr<-1
 
-ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
+# Defining the cutoffs
+ul.mito <- attr(mito.drop.high,'thresholds')[2]
+ll.cd <- attr(libsize.drop.low,'thresholds')[1]
+ul.cd <- attr(libsize.drop.high,'thresholds')[2]
+ll.ng <- attr(feature.drop.low,'thresholds')[1]
+ul.ng <- attr(feature.drop.high,'thresholds')[2]
+```
+
+#Graph of data Before and After Filtering
+Here we make a scatter, histogram and violin plot of the data before and after its gets filtered
+(Note: Verbeter look van grafieken)
+```{r}
+
+MitoPrecentage <- sce$subsets_Mito_percent
+
+sctplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_point(aes(colour = MitoPrecentage ))+
+  scale_colour_gradientn(colours=terrain.colors(10))+
+  
+  
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.5)+
+geom_hline(yintercept = ll.ng,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_hline(yintercept = ul.ng,linetype="dotted", 
+                color = "red", size=1.5)
+
+MitoPrecentageF <- scef$subsets_Mito_percent
+
+sctplt2 <- ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
   geom_point(aes(colour = MitoPrecentageF ))+
   scale_colour_gradientn(colours=terrain.colors(10))+
   
   
-  geom_vline(xintercept = 1000,linetype="dotted", 
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.5)+
-   geom_vline(xintercept = 10000,linetype="dotted", 
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
                 color = "red", size=1.5)+
-geom_hline(yintercept = 1000,linetype="dotted", 
+geom_hline(yintercept = ll.ng,linetype="dotted", 
                 color = "blue", size=1.5)+
-   geom_hline(yintercept = 5000,linetype="dotted", 
+   geom_hline(yintercept = ul.ng,linetype="dotted", 
                 color = "red", size=1.5)
 
+sctplt1 
+sctplt2
+#Violin and Histogram plot VOor en NA
+```
+
+```{r}
+hist1 <- ggplot(metaData, aes(x = nUMI)) +
+  geom_histogram(binwidth=100)+  
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.1)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.1)
+
+hist2 <- ggplot(metaDataF, aes(x = nUMI)) +
+  geom_histogram(binwidth=100)+
+    geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.1)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.1)
+
+hist1 
+hist2
 
 ```
+
+
+```{r}
+
+vlplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_violin()
+
+vlplt2 <-ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_violin()
+
+vlplt1 + vlplt2
+```
+
+#Normailzation
+
+```{r}
+ scef <- NormalizeData(scef, normalization.method = "LogNormalize", scale.factor = 1e4)
+
+```
+
+
+
