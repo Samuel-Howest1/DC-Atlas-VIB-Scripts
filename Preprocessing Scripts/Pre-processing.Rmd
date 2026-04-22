@@ -68,6 +68,7 @@ metaData$staticNr<-1
 # FILTERING Test
 
 sampleName<-"GSM_2677817"
+experiment <- sampleName
 batch <- rep(sampleName, colnames(rawDataRNA) %>% length())
 
 # Setting cut offs (Increased the cutoffs, Still Increase?)
@@ -138,7 +139,6 @@ sctplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) +
   geom_point(aes(colour = MitoPrecentage ))+
   scale_colour_gradientn(colours=terrain.colors(10))+
   
-  
   geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.5)+
    geom_vline(xintercept = ul.cd,linetype="dotted", 
@@ -146,7 +146,8 @@ sctplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) +
 geom_hline(yintercept = ll.ng,linetype="dotted", 
                 color = "blue", size=1.5)+
    geom_hline(yintercept = ul.ng,linetype="dotted", 
-                color = "red", size=1.5)
+                color = "red", size=1.5)+
+    theme_bw()
 
 MitoPrecentageF <- scef$subsets_Mito_percent
 
@@ -154,7 +155,6 @@ sctplt2 <- ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
   geom_point(aes(colour = MitoPrecentageF ))+
   scale_colour_gradientn(colours=terrain.colors(10))+
   
-  
   geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.5)+
    geom_vline(xintercept = ul.cd,linetype="dotted", 
@@ -162,7 +162,8 @@ sctplt2 <- ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 geom_hline(yintercept = ll.ng,linetype="dotted", 
                 color = "blue", size=1.5)+
    geom_hline(yintercept = ul.ng,linetype="dotted", 
-                color = "red", size=1.5)
+                color = "red", size=1.5)+
+  theme_bw()
 
 sctplt1 
 sctplt2
@@ -175,14 +176,16 @@ hist1 <- ggplot(metaData, aes(x = nUMI)) +
   geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.1)+
    geom_vline(xintercept = ul.cd,linetype="dotted", 
-                color = "red", size=1.1)
+                color = "red", size=1.1)+
+  theme_bw()
 
 hist2 <- ggplot(metaDataF, aes(x = nUMI)) +
   geom_histogram(binwidth=100)+
     geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.1)+
    geom_vline(xintercept = ul.cd,linetype="dotted", 
-                color = "red", size=1.1)
+                color = "red", size=1.1)+
+  theme_bw()+
 
 hist1 
 hist2
@@ -193,20 +196,47 @@ hist2
 ```{r}
 
 vlplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
-  geom_violin()
+  geom_violin(fill="red")+
+  theme_bw()
 
-vlplt2 <-ggplot(metaData,aes(x=nUMI, y=nGene)) + 
-  geom_violin()
+vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
+  geom_violin(fill= "green")+
+  theme_bw()
 
 vlplt1 + vlplt2
 ```
+#Creating Seurat Object
+```{r}
+rawDataFiltered<-rawDataRNA[rownames(scef),colnames(scef)] 
+# IETS FOUT GEGAAN HIER
+# CREATE SEURAT OBJECT
+cells.to.keep <- colnames(scef)
+seuratObj_tmp <- CreateSeuratObject(rawDataFiltered, project = experiment)
+seuratObj <- as.Seurat(scef,counts = "counts",data = NULL)
+meta_tmp <- merge(seuratObj_tmp@meta.data, seuratObj@meta.data, by=0, all=TRUE, sort=FALSE)
+rownames(meta_tmp) <- meta_tmp[,1]
+meta_tmp <- meta_tmp[,-1]
+seuratObj@meta.data <- meta_tmp
+
+```
+
 
 #Normailzation
 
 ```{r}
- scef <- NormalizeData(scef, normalization.method = "LogNormalize", scale.factor = 1e4)
+#Creating Seurat Object
+ seuratObj <- NormalizeData(seuratObj, normalization.method = "LogNormalize", scale.factor = 1e4)
 
 ```
 
 
 
+#Dimensional reduction
+```{r}
+
+all.genes <- rownames(pbmc)
+seuratObj <- ScaleData(seuratObj, features = all.genes)
+
+seuratObj <- RunPCA(seuratObj, features = VariableFeatures(object = seuratObj))
+
+```
