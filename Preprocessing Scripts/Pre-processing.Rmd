@@ -58,7 +58,7 @@ metaData<-data.frame("staticNr"=colnames(rawDataRNA),
                      stringsAsFactors = F)
 #Rownames fixen
 rownames(metaData)<-metaData$staticNr
-metaData$staticNr<-1 # Waarom kolom alles verander naar -1?
+metaData$staticNr<-1
 
 
 ```
@@ -107,12 +107,11 @@ metaData$nUMI.drop=libsize.drop
 metaData$mito.drop=mito.drop
 metaData$final.drop=feature.drop | libsize.drop | mito.drop
 
-#Remove the data out of sce
-#sce <- sce[,!(libsize.drop | feature.drop | mito.drop)]
+
 
 ```
 
-#Creating plot of the filter data
+#Scatter plot Before filtering
 ```{r}
 
 #mad(sce$detected, nmads=5)
@@ -121,8 +120,60 @@ MitoPrecentage <- sce$subsets_Mito_percent
 
 ggplot(metaData,aes(x=nUMI, y=nGene)) + 
   geom_point(aes(colour = MitoPrecentage ))+
-  scale_colour_gradient(colours=terrain.colors(10))+
+  scale_colour_gradientn(colours=terrain.colors(10))+
   
+  
+  geom_vline(xintercept = 1000,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_vline(xintercept = 10000,linetype="dotted", 
+                color = "red", size=1.5)+
+geom_hline(yintercept = 1000,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_hline(yintercept = 5000,linetype="dotted", 
+                color = "red", size=1.5)
+
+
+```
+#Removing the outliers
+```{r}
+
+#Remove the data out of sce
+scef <- sce[,!(libsize.drop | feature.drop | mito.drop)]
+
+```
+
+#Scatter plot after filtering
+
+```{r}
+
+metaDataF <- merge(
+  metaData,
+  scef$,
+  by = ""
+)
+``` 
+
+```{r}
+
+#mad(sce$detected, nmads=5)
+
+MitoPrecentageF <- scef$subsets_Mito_percent
+MetaRownames <- metaData$percent.mito == MitoPrecentageF
+
+# Metadata rows have to be equel to MitoPrecentage
+# Creating a Filter Metadata for the showcase
+metaDataF<-data.frame("staticNr"=rownames(metaData[MetaRownames,]),
+                     "nGene"=scef$detected,
+                     "nUMI"=scef$sum,
+                     "percent.mito"=scef$subsets_Mito_percent, 
+                     stringsAsFactors = F)
+#Rownames fixen
+rownames(metaDataF)<-metaDataF$staticNr
+metaDataF$staticNr<-1
+
+ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
+  geom_point(aes(colour = MitoPrecentageF ))+
+  scale_colour_gradientn(colours=terrain.colors(10))+
   
   
   geom_vline(xintercept = 1000,linetype="dotted", 
