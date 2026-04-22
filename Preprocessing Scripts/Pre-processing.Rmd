@@ -15,8 +15,8 @@ library("renv")
 library("tidyverse")
 library("Seurat")
 library("SingleCellExperiment")
-library("scater")
-#library("scran") Bluster Dependencie doesnt install correctly
+library("scater") 
+library("scran") # Note for Windows --> Bluster dependencie doesnt compile properly in windows, mannulay add the bluster package to library. Download ---> https://bioc.r-universe.dev/bluster
 library('fields')
 #library('modes') #Niet in CRan
 library("dplyr")
@@ -40,15 +40,37 @@ rawDataRNA <- as.matrix(rawData$`Gene Expression`)
 ```{r}
 
 sce<-SingleCellExperiment(list(counts=rawDataRNA))
+# Everything starting with MT put in is.mito vector
 is.mito <- grepl("^MT-", rownames(sce), ignore.case = TRUE)
+
+#Scuttle function: addPerCellQC: Add QC metrics to a SummarizedExperiment
+#QCmetric: Compute per-cell quality control metrics for a count matrix or a SingleCellExperiment. 
+
 sce<- addPerCellQC(sce, subsets=list(Mito=is.mito))
+
+# Make Metadata dataframe
 metaData<-data.frame("staticNr"=colnames(rawDataRNA), 
                      "nGene"=sce$detected,
                      "nUMI"=sce$sum,
                      "percent.mito"=sce$subsets_Mito_percent, 
                      stringsAsFactors = F)
+#Rownames fixen
 rownames(metaData)<-metaData$staticNr
-metaData$staticNr<-1
+metaData$staticNr<-1 # Waarom kolom alles verander naar -1?
+
+
+```
+
+
+```{r}
+
+# FILTERING Test
+nmad_low_feature<-5
+nmad_high_feature<-5
+nmad_low_UMI<-5
+nmad_high_UMI<-5
+nmad_high_mito<-10
+
 
 
 ```
