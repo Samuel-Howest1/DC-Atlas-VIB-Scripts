@@ -234,7 +234,7 @@ seuratObj@meta.data <- meta_tmp
 #Dimensional reduction
 ```{r}
 
-all.genes <- rownames(pbmc)
+all.genes <- rownames(seuratObj)
 seuratObj <- ScaleData(seuratObj, features = all.genes)
 
 seuratObj <- RunPCA(seuratObj, features = VariableFeatures(object = seuratObj))
