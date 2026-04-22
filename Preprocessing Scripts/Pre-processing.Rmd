@@ -22,6 +22,7 @@ library('fields')
 library("dplyr")
 library("stringr")
 library("readr")
+library("ggplot2")
 
 
 ```
@@ -33,12 +34,13 @@ library("readr")
 setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- as.matrix(rawData$`Gene Expression`)
+# Rawdata is 6.1 GB, it can be loaded but not examined ---> Took a subset of cells
+rawDataRNA <- rawDataRNA[, 1:1000]
 
 ```
 
 
 ```{r}
-s
 sce<-SingleCellExperiment(list(counts=rawDataRNA))
 # Everything starting with MT put in is.mito vector
 is.mito <- grepl("^MT-", rownames(sce), ignore.case = TRUE)
@@ -66,13 +68,19 @@ metaData$staticNr<-1 # Waarom kolom alles verander naar -1?
 
 # FILTERING Test
 
+sampleName<-"GSM_2677817"
+batch <- rep(sampleName, colnames(rawDataRNA) %>% length())
+
 # Setting cut offs
+# Nummber of genes
 nmad_low_feature<-5
 nmad_high_feature<-5
 
+# Total counts all gene in a cell
 nmad_low_UMI<-5
 nmad_high_UMI<-5
 
+# Precentage Mitchondrial gene
 nmad_high_mito<-10
 
 #Filter both Low and High outliers out
@@ -90,6 +98,41 @@ libsize.drop<-as.logical(libsize.drop.low+libsize.drop.high)
 
 #Filtering High out
 mito.drop.high <- isOutlier(sce$subsets_Mito_percent, nmads=nmad_high_mito, type="higher",batch = batch)
-mito.drop<-as.logical(mito.drop.high)
+mito.drop <- as.logical(mito.drop.high)
+
+
+# Add dropped cells to metadata
+metaData$nGene.drop=feature.drop
+metaData$nUMI.drop=libsize.drop
+metaData$mito.drop=mito.drop
+metaData$final.drop=feature.drop | libsize.drop | mito.drop
+
+#Remove the data out of sce
+#sce <- sce[,!(libsize.drop | feature.drop | mito.drop)]
+
+```
+
+#Creating plot of the filter data
+```{r}
+
+#mad(sce$detected, nmads=5)
+
+MitoPrecentage <- sce$subsets_Mito_percent
+
+ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_point(aes(colour = MitoPrecentage ))+
+  scale_colour_gradient(colours=terrain.colors(10))+
+  
+  
+  
+  geom_vline(xintercept = 1000,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_vline(xintercept = 10000,linetype="dotted", 
+                color = "red", size=1.5)+
+geom_hline(yintercept = 1000,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_hline(yintercept = 5000,linetype="dotted", 
+                color = "red", size=1.5)
+
 
 ```
