@@ -38,7 +38,7 @@ rawDataRNA <- as.matrix(rawData$`Gene Expression`)
 
 
 ```{r}
-
+s
 sce<-SingleCellExperiment(list(counts=rawDataRNA))
 # Everything starting with MT put in is.mito vector
 is.mito <- grepl("^MT-", rownames(sce), ignore.case = TRUE)
@@ -65,12 +65,31 @@ metaData$staticNr<-1 # Waarom kolom alles verander naar -1?
 ```{r}
 
 # FILTERING Test
+
+# Setting cut offs
 nmad_low_feature<-5
 nmad_high_feature<-5
+
 nmad_low_UMI<-5
 nmad_high_UMI<-5
+
 nmad_high_mito<-10
 
+#Filter both Low and High outliers out
+feature.drop.low <- isOutlier(sce$detected, nmads=nmad_low_feature, type="lower", log=TRUE,batch = batch)
+feature.drop.high <- isOutlier(sce$detected, nmads=nmad_high_feature, type="higher", log=TRUE,batch = batch)
+# Putting everything togheter
+feature.drop<-as.logical(feature.drop.low + feature.drop.high,batch = batch)
 
+#Filter both Low and High outliers out
+libsize.drop.low <- isOutlier(sce$sum, nmads=nmad_low_UMI, type="lower", log=TRUE,batch = batch)
+libsize.drop.high <- isOutlier(sce$sum, nmads=nmad_high_UMI, type="higher", log=TRUE,batch = batch)
+
+# Putting everything togheter
+libsize.drop<-as.logical(libsize.drop.low+libsize.drop.high)
+
+#Filtering High out
+mito.drop.high <- isOutlier(sce$subsets_Mito_percent, nmads=nmad_high_mito, type="higher",batch = batch)
+mito.drop<-as.logical(mito.drop.high)
 
 ```
