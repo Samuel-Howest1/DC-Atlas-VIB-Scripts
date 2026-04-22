@@ -22,3 +22,5 @@ library("readr")
 #RNA
 ############################################
 
+rawData <- Read10X_h5("/Users/samueDesktop\Stage VIB\RawData\SAM2\filtered_feature_bc_matrix")
+rawDataRNA <- as.matrix(rawData$`Gene Expression`)
