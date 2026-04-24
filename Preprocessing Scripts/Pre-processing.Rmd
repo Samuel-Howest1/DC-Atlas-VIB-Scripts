@@ -242,4 +242,45 @@ seuratObj <- RunPCA(seuratObj, features = VariableFeatures(object = seuratObj))
 
 ElbowPlot(seuratObj)
 
+# Results SAM2: Use 14 Dimension
 ```
+
+
+```{r}
+
+print(seuratObj[["pca"]], dims = 1:5, nfeatures = 5)
+
+
+```
+#Clustering of cells
+
+```{r}
+
+seuratObj <- FindNeighbors(seuratObj, dims = 1:14)
+seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+
+```
+
+
+
+
+
+#UMAP
+
+```{r}
+
+seuratObj <- RunUMAP(seuratObj, dims = 1:14)
+DimPlot(seuratObj, reduction = "umap")
+```
+
+#Finding Doublets
+
+```{r}
+
+
+
+
+```
+
+
+
