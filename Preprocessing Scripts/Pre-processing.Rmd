@@ -39,7 +39,6 @@ rawDataRNA <- rawDataRNA[, 1:1000]
 
 ```
 
-
 ```{r}
 sce<-SingleCellExperiment(list(counts=rawDataRNA))
 # Everything starting with MT put in is.mito vector
@@ -62,7 +61,6 @@ metaData$staticNr<-1
 
 
 ```
-
 
 ```{r}
 # FILTERING Test
@@ -128,9 +126,10 @@ ll.ng <- attr(feature.drop.low,'thresholds')[1]
 ul.ng <- attr(feature.drop.high,'thresholds')[2]
 ```
 
-#Graph of data Before and After Filtering
-Here we make a scatter, histogram and violin plot of the data before and after its gets filtered
-(Note: Verbeter look van grafieken)
+#Graphs Before and after
+
+Graph of data Before and After Filtering Here we make a scatter, histogram and violin plot of the data before and after its gets filtered (Note: Verbeter look van grafieken)
+
 ```{r}
 
 MitoPrecentage <- sce$subsets_Mito_percent
@@ -192,7 +191,6 @@ hist2
 
 ```
 
-
 ```{r}
 
 vlplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
@@ -205,7 +203,9 @@ vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 
 vlplt1 + vlplt2
 ```
-#Creating Seurat Object
+
+##Creating Seurat Object
+
 ```{r}
 rawDataFiltered<-rawDataRNA[rownames(scef),colnames(scef)] 
 # IETS FOUT GEGAAN HIER
@@ -216,8 +216,7 @@ seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment)
 
 ```
 
-
-#Normailzation
+##Normailzation
 
 ```{r}
 #Creating Seurat Object
@@ -227,17 +226,23 @@ seuratObj <- FindVariableFeatures(seuratObj, selection.method = 'vst', nfeatures
 
 ```
 
+##Dimensional reduction
 
-
-#Dimensional reduction
 ```{r}
 
 all.genes <- rownames(seuratObj)
 seuratObj <- ScaleData(seuratObj, features = all.genes)
 
-seuratObj <- RunPCA(seuratObj, features = VariableFeatures(object = seuratObj))
+seuratObj <- RunPCA(seuratObj, 
+                    features = VariableFeatures(object = seuratObj), 
+                    ndims.print = 1:5, nfeatures.print = 10,
+                    assay = "RNA",
+                    reduction.name = "RNA_pca",
+                    reduction.key = "rnaPC_")
 ```
-# Optimize PCA
+
+## Optimize PCA
+
 ```{r}
 
 ElbowPlot(seuratObj)
@@ -245,14 +250,14 @@ ElbowPlot(seuratObj)
 # Results SAM2: Use 14 Dimension
 ```
 
-
 ```{r}
 
 print(seuratObj[["pca"]], dims = 1:5, nfeatures = 5)
 
 
 ```
-#Clustering of cells
+
+##Clustering of cells
 
 ```{r}
 
@@ -261,11 +266,7 @@ seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 ```
 
-
-
-
-
-#UMAP
+##UMAP
 
 ```{r}
 
@@ -273,14 +274,57 @@ seuratObj <- RunUMAP(seuratObj, dims = 1:14)
 DimPlot(seuratObj, reduction = "umap")
 ```
 
-#Finding Doublets
+##Finding Cluster Biomarkers
 
 ```{r}
 
+ClusterRNA6 <- FindAllMarkers(seuratObj, only.pos = TRUE)
+ClusterRNA6<-ClusterRNA6[order(ClusterRNA6$p_val_adj, decreasing = FALSE), ]
+head(ClusterRNA6, n = 6)
 
+
+```
+
+## Plotting Biomarkers
+
+```{r}
+
+FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf	", "Spc24", "Cd3g", "Cdk1"))
+
+```
+
+```{r}
 
 
 ```
 
 
+#ADT
+
+```{r}
+rawDataADT <- as.matrix(rawData$`Antibody Capture`)
+rawDataADT <- rawDataADT[, 1:1000]
+
+raw.names <- rownames(rawDataADT)
+cells.use  <- intersect(colnames(rawDataADT), colnames(seuratObj))
+ABS.use  <- rownames(rawDataADT)
+rawDataADT <- rawDataADT[ABS.use, cells.use]
+seuratObj[["ADT"]] <- CreateAssayObject(counts = rawDataADT[,colnames(seuratObj)])
+
+seuratObj <- NormalizeData(seuratObj, assay = "ADT", normalization.method = "CLR", verbose=T)
+
+seuratObj <- FindVariableFeatures(seuratObj,assay="ADT",selection.method = "vst", nfeatures=nrow(rawDataADT))
+
+
+#Dimensenioanly Reduction
+seuratObj <- ScaleData(seuratObj, features = all.genes)
+
+seuratObj <- RunPCA(seuratObj, 
+                    features = VariableFeatures(object = seuratObj), 
+                    ndims.print = 1:5, nfeatures.print = 10,
+                    assay = "RNA",
+                    reduction.name = "RNA_pca",
+                    reduction.key = "rnaPC_")
+
+```
 
