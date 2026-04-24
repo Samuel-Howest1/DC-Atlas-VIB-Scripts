@@ -245,7 +245,7 @@ seuratObj <- RunPCA(seuratObj,
 
 ```{r}
 
-ElbowPlot(seuratObj, reduction = "RNA_pca", redection.name="")
+ElbowPlot(seuratObj, reduction = "RNA_pca")
 
 # Results SAM2: Use 14 Dimension
 ```
@@ -270,8 +270,8 @@ seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 ```{r}
 
-seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca")
-DimPlot(seuratObj, reduction = "umap")
+seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+DimPlot(seuratObj, reduction = "RNA_umap")
 ```
 
 ##Finding Cluster Biomarkers
@@ -323,12 +323,12 @@ seuratObj <- RunPCA(seuratObj,
                     reduction.key = "adtPC_")
 # Finding Cluster
 
-seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca" ,dims = 1:14)
+seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:14)
 seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 
 # UMAP
-seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca")
+seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca", reduction.name ="ADT_umap" )
 DimPlot(seuratObj, reduction = "ADT_umap")
 
 #Finding Markers
@@ -356,7 +356,7 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
 # MARKERS: General CDC
 # MARKERS: CDC1 and 2 , Migetory and Profilatrate
 
-DimPlot(seuratObj, reduction = "umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
+DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
 ```
 
 
