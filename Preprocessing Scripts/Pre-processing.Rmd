@@ -23,7 +23,7 @@ library("dplyr")
 library("stringr")
 library("readr")
 library("ggplot2")
-
+library("HGNChelper") #For sc_type nesseacry
 
 ```
 
@@ -35,7 +35,7 @@ setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- as.matrix(rawData$`Gene Expression`)
 # Rawdata is 6.1 GB, it can be loaded but not examined ---> Took a subset of cells
-rawDataRNA <- rawDataRNA[, 1:1000]
+rawDataRNA <- rawDataRNA[, 1:2000]
 
 ```
 
@@ -245,14 +245,14 @@ seuratObj <- RunPCA(seuratObj,
 
 ```{r}
 
-ElbowPlot(seuratObj)
+ElbowPlot(seuratObj, reduction = "RNA_pca", redection.name="")
 
 # Results SAM2: Use 14 Dimension
 ```
 
 ```{r}
 
-print(seuratObj[["pca"]], dims = 1:5, nfeatures = 5)
+print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
 
 
 ```
@@ -260,8 +260,8 @@ print(seuratObj[["pca"]], dims = 1:5, nfeatures = 5)
 ##Clustering of cells
 
 ```{r}
-
-seuratObj <- FindNeighbors(seuratObj, dims = 1:14)
+# Test more than 14 dimensions (see example script)
+seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 ```
@@ -270,7 +270,7 @@ seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 ```{r}
 
-seuratObj <- RunUMAP(seuratObj, dims = 1:14)
+seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca")
 DimPlot(seuratObj, reduction = "umap")
 ```
 
@@ -289,12 +289,7 @@ head(ClusterRNA6, n = 6)
 
 ```{r}
 
-FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf	", "Spc24", "Cd3g", "Cdk1"))
-
-```
-
-```{r}
-
+FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", "Cdk1"))
 
 ```
 
@@ -303,7 +298,7 @@ FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf	", "Spc24", "Cd3g",
 
 ```{r}
 rawDataADT <- as.matrix(rawData$`Antibody Capture`)
-rawDataADT <- rawDataADT[, 1:1000]
+rawDataADT <- rawDataADT[, 1:2000]
 
 raw.names <- rownames(rawDataADT)
 cells.use  <- intersect(colnames(rawDataADT), colnames(seuratObj))
@@ -333,15 +328,36 @@ seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 
 # UMAP
-seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT")
-DimPlot(seuratObj, reduction = "ADT_pca")
+seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca")
+DimPlot(seuratObj, reduction = "ADT_umap")
 
 #Finding Markers
 
 ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
 head(ClusterADT6, n = 6)
 
-FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf	", "Spc24", "Cd3g", "Cdk1"))
+FeaturePlot(seuratObj, features = c("CD24", "CD9", "CD371	", "CD272", "XCR1", "CD29"))
 
 ```
+#Annotation Cells
+
+```{r}
+
+## readRDS of your sample before
+# sample <- readRDS("/absolute/path/sample.RDS");
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_wrapper.R"); 
+seuratObj <- run_sctype(seurat_object = seuratObj,
+                     assay = "RNA",
+                     scaled = TRUE,
+                     known_tissue_type="Immune system",
+                     custom_marker_file="/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx",
+                     name="sctype_classification")
+
+# MARKERS: General CDC
+# MARKERS: CDC1 and 2 , Migetory and Profilatrate
+
+DimPlot(seuratObj, reduction = "umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
+```
+
+
 
