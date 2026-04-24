@@ -311,20 +311,37 @@ ABS.use  <- rownames(rawDataADT)
 rawDataADT <- rawDataADT[ABS.use, cells.use]
 seuratObj[["ADT"]] <- CreateAssayObject(counts = rawDataADT[,colnames(seuratObj)])
 
+#Normalization
 seuratObj <- NormalizeData(seuratObj, assay = "ADT", normalization.method = "CLR", verbose=T)
 
 seuratObj <- FindVariableFeatures(seuratObj,assay="ADT",selection.method = "vst", nfeatures=nrow(rawDataADT))
 
 
 #Dimensenioanly Reduction
-seuratObj <- ScaleData(seuratObj, features = all.genes)
+seuratObj <- ScaleData(seuratObj, assay = "ADT")
 
 seuratObj <- RunPCA(seuratObj, 
-                    features = VariableFeatures(object = seuratObj), 
+                    features = VariableFeatures(object = seuratObj, assay = "ADT"), 
                     ndims.print = 1:5, nfeatures.print = 10,
-                    assay = "RNA",
-                    reduction.name = "RNA_pca",
-                    reduction.key = "rnaPC_")
+                    assay = "ADT",
+                    reduction.name = "ADT_pca",
+                    reduction.key = "adtPC_")
+# Finding Cluster
+
+seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca" ,dims = 1:14)
+seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+
+
+# UMAP
+seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT")
+DimPlot(seuratObj, reduction = "ADT_pca")
+
+#Finding Markers
+
+ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
+head(ClusterADT6, n = 6)
+
+FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf	", "Spc24", "Cd3g", "Cdk1"))
 
 ```
 
