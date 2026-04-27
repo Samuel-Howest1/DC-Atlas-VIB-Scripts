@@ -12,6 +12,7 @@ Pre-processing of CITE-seq data This Script is the first and will be used to pre
 ###############################################
 
 library("renv")
+#library("clustree")
 library("tidyverse")
 library("Seurat")
 library("SingleCellExperiment")
@@ -136,7 +137,7 @@ MitoPrecentage <- sce$subsets_Mito_percent
 
 sctplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
   geom_point(aes(colour = MitoPrecentage ))+
-  scale_colour_gradientn(colours=terrain.colors(10))+
+  scale_colour_gradientn(colours=terrain.colors(10), limits=c(0,4))+
   
   geom_vline(xintercept = ll.cd,linetype="dotted", 
                 color = "blue", size=1.5)+
@@ -166,7 +167,11 @@ geom_hline(yintercept = ll.ng,linetype="dotted",
 
 sctplt1 
 sctplt2
-#Violin and Histogram plot VOor en NA
+
+# Zoomed in Plots
+sctplt1+ coord_cartesian(ylim = c(0, 2500),xlim = c(0,2500))
+sctplt2+ coord_cartesian(ylim = c(0, 2500),xlim = c(0,2500))
+
 ```
 
 ```{r}
@@ -203,7 +208,7 @@ vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 
 vlplt1 + vlplt2
 ```
-
+## Finding Doublets
 ```{r}
 
 scef <- scDblFinder(scef)
@@ -228,6 +233,10 @@ gc()
 # CREATE SEURAT OBJECT
 cells.to.keep <- colnames(scef)
 seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment, min.cells=1)
+
+#Adding scDblFinder data to the Seuratobject
+seuratObj$scDblFinder.score <- scef$scDblFinder.score
+seuratObj$scDblFinder.class <- scef$scDblFinder.class
 
 # Removing Object for performance
 rm(rawDataFiltered)
