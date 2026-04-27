@@ -208,6 +208,15 @@ vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 
 vlplt1 + vlplt2
 ```
+
+## Mitochondrial gene plot
+```{r}
+
+
+
+```
+
+
 ## Finding Doublets
 ```{r}
 
@@ -289,21 +298,34 @@ print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
 
 ```
 
-##Clustering of cells
+##Finding Best Clustering of cells
 
 ```{r}
 # Test more than 14 dimensions (see example script)
-seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
-seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+StartingDims <- 5
+EndingDims <- 14
+TotalDims <- EndingDims - StartingDims
 
+print(paste0("Working on Dims Starting form ",StartingDims, " to Dims ", EndingDims ," Total: ",TotalDims))
+
+ListDims <- seq(1:TotalDims)
+for(i in ListDims){
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:StartingDims, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:StartingDims,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")
+  UMAPgraph
+  StartingDims <- StartingDims + 1
+}
 ```
 
-##UMAP
-
+# Best Clustering of cells
 ```{r}
 
-seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
-DimPlot(seuratObj, reduction = "RNA_umap")
+seuratObj <- FindNeighbors(seuratObj, dims = 1:10, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  DimPlot(seuratObj, reduction = "RNA_umap")
 ```
 
 ##Finding Cluster Biomarkers
