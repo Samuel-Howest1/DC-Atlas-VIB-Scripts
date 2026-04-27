@@ -211,6 +211,22 @@ vlplt1 + vlplt2
 
 ## Mitochondrial gene plot
 ```{r}
+Mito1 <- ggplot(metaData, aes(x=MitoPrecentage)) + 
+  geom_histogram(binwidth = 0.1)+
+  geom_vline(xintercept = ul.mito,linetype="dotted", 
+                color = "blue", size=1.5)
+
+Mito2 <- ggplot(metaDataF, aes(x=MitoPrecentageF)) + 
+  geom_histogram(binwidth = 0.1)+
+  geom_vline(xintercept = ul.mito,linetype="dotted", 
+                color = "blue", size=1.5)
+
+Mito1
+Mito2
+
+# Zoom in grafiek 1
+Mito1 + coord_cartesian(xlim = c(0,10))
+
 
 
 
@@ -302,27 +318,31 @@ print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
 
 ```{r}
 # Test more than 14 dimensions (see example script)
-StartingDims <- 5
+StartingDims <- 4 # Always do Starting Amount of Dims - 1
 EndingDims <- 14
 TotalDims <- EndingDims - StartingDims
 
 print(paste0("Working on Dims Starting form ",StartingDims, " to Dims ", EndingDims ," Total: ",TotalDims))
 
-ListDims <- seq(1:TotalDims)
+ListDims <- seq(1:TotalDims+1)
 for(i in ListDims){
+  #Creating Mulitple Cluster Maps with Different Dims
+  StartingDims <- StartingDims + 1
   seuratObj <- FindNeighbors(seuratObj, dims = 1:StartingDims, reduction = "RNA_pca")
   seuratObj <- FindClusters(seuratObj, resolution = 0.5)
   seuratObj <- RunUMAP(seuratObj, dims = 1:StartingDims,reduction = "RNA_pca", reduction.name = "RNA_umap" )
-  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")
-  UMAPgraph
-  StartingDims <- StartingDims + 1
+  
+  #Title for UMap
+  UMAPTitle <- paste0("UMAP Number = ",StartingDims)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")+ggtitle(UMAPTitle)
+  print(UMAPgraph)
 }
 ```
 
 # Best Clustering of cells
 ```{r}
 
-seuratObj <- FindNeighbors(seuratObj, dims = 1:10, reduction = "RNA_pca")
+seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
   seuratObj <- FindClusters(seuratObj, resolution = 0.5)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   DimPlot(seuratObj, reduction = "RNA_umap")
@@ -375,6 +395,28 @@ seuratObj <- RunPCA(seuratObj,
                     reduction.key = "adtPC_")
 # Finding Cluster
 
+StartingDimsADT <- 4 # Always do Starting Amount of Dims - 1
+EndingDimsADT <- 14
+TotalDimsADT <- EndingDimsADT - StartingDimsADT
+
+print(paste0("Working on Dims Starting form ",StartingDimsADT, " to Dims ", EndingDimsADT ," Total: ",TotalDimsADT))
+
+ListDimsADT <- seq(1:TotalDimsADT+1)
+for(i in ListDimsADT){
+  #Creating Mulitple Cluster Maps with Different Dims
+  StartingDimsADT <- StartingDimsADT + 1
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:StartingDimsADT, reduction = "ADT_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:StartingDimsADT,reduction = "ADT_pca", reduction.name = "ADT_umap" )
+  
+  #Title for UMap
+  UMAPTitleADT <- paste0("UMAP Number = ",StartingDimsADT)
+  UMAPgraphADT  <-DimPlot(seuratObj, reduction = "ADT_umap")+ggtitle(UMAPTitleADT)
+  print(UMAPgraphADT)
+}
+
+
+#Best Cluster (Change dims)
 seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:14)
 seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
@@ -391,6 +433,9 @@ head(ClusterADT6, n = 6)
 FeaturePlot(seuratObj, features = c("CD24", "CD9", "CD371	", "CD272", "XCR1", "CD29"))
 
 ```
+
+
+
 #Annotation Cells
 
 ```{r}
@@ -412,6 +457,11 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by 
 ```
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
+```{r}
+
+
+
+```
 
 # After Clustering Filitering (see notes and scripts (general))
 ```{r}
