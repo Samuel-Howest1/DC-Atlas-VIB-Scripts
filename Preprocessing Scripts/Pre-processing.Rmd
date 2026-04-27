@@ -18,7 +18,6 @@ library("SingleCellExperiment")
 library("scater") 
 library("scran") # Note for Windows --> Bluster dependencie doesnt compile properly in windows, mannulay add the bluster package to library. Download ---> https://bioc.r-universe.dev/bluster
 library('fields')
-#library('modes') #Niet in CRan
 library("dplyr")
 library("stringr")
 library("readr")
@@ -80,7 +79,7 @@ nmad_low_UMI<-3
 nmad_high_UMI<-3
 
 # Precentage Mitchondrial gene
-nmad_high_mito<-10
+nmad_high_mito<- 5
 
 #Filter both Low and High outliers out
 feature.drop.low <- isOutlier(sce$detected, nmads=nmad_low_feature, type="lower", log=TRUE,batch = batch)
@@ -216,11 +215,24 @@ scef <- scDblFinder(scef)
 ##Creating Seurat Object
 
 ```{r}
-rawDataFiltered<-rawDataRNA[rownames(scef),colnames(scef)] 
-# IETS FOUT GEGAAN HIER
+rawDataFiltered<-rawDataRNA[rownames(scef),colnames(scef)]
+# Creating ADT RawData
+rawDataADT <- as.matrix(rawData$`Antibody Capture`)
+rawDataADT <- rawDataADT
+
+rm(rawData)
+rm(rawDataRNA)
+rm(sce)
+gc()
+
 # CREATE SEURAT OBJECT
 cells.to.keep <- colnames(scef)
-seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment)
+seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment, min.cells=1)
+
+# Removing Object for performance
+rm(rawDataFiltered)
+rm(scef)
+gc()
 
 
 ```
@@ -241,6 +253,8 @@ seuratObj <- FindVariableFeatures(seuratObj, selection.method = 'vst', nfeatures
 
 all.genes <- rownames(seuratObj)
 seuratObj <- ScaleData(seuratObj, features = all.genes)
+
+#seuratObj <- wilcoxauc(seuratObj, 'cell_type', seurat_assay = 'RNA') # Presto not in CRAN, Recieve error when using recommend command devtools::install_github("immunogenomics/presto")
 
 seuratObj <- RunPCA(seuratObj, 
                     features = VariableFeatures(object = seuratObj), 
@@ -306,8 +320,6 @@ FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", 
 #ADT
 
 ```{r}
-rawDataADT <- as.matrix(rawData$`Antibody Capture`)
-rawDataADT <- rawDataADT[, 1:2000]
 
 raw.names <- rownames(rawDataADT)
 cells.use  <- intersect(colnames(rawDataADT), colnames(seuratObj))
@@ -367,7 +379,10 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
 
 DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
 ```
+# Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
+
+# After Clustering Filitering (see notes and scripts (general))
 ```{r}
 
 
