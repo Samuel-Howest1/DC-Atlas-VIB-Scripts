@@ -209,7 +209,7 @@ vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 vlplt1 + vlplt2
 ```
 
-## Mitochondrial gene plot
+## Mitochondrial gene Percentage plot
 ```{r}
 Mito1 <- ggplot(metaData, aes(x=MitoPrecentage)) + 
   geom_histogram(binwidth = 0.1)+
@@ -235,8 +235,23 @@ Mito1 + coord_cartesian(xlim = c(0,10))
 
 ## Finding Doublets
 ```{r}
+BeforescDbl <- ncol(scef)
+
 
 scef <- scDblFinder(scef)
+
+```
+
+##How many cells were removed during filtering?
+```{r}
+BeforeFiltering <- ncol(sce)
+AfterscDbl <- ncol(scef)
+
+print("How many cells removed?")
+print(paste("Before Filtering",BeforeFiltering))
+print(paste("Before scDblFinder",BeforescDbl))
+print(paste("After scDblFinder",AfterscDbl))
+
 
 
 ```
@@ -352,8 +367,8 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 
 ```{r}
 
-ClusterRNA6 <- FindAllMarkers(seuratObj, only.pos = TRUE)
-ClusterRNA6<-ClusterRNA6[order(ClusterRNA6$p_val_adj, decreasing = FALSE), ]
+ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE)
+ClusterRNA<-ClusterRNA6[order(ClusterRNA6$p_val_adj, decreasing = FALSE), ]
 head(ClusterRNA6, n = 6)
 
 
