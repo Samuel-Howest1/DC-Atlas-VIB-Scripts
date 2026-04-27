@@ -24,6 +24,7 @@ library("stringr")
 library("readr")
 library("ggplot2")
 library("HGNChelper") #For sc_type nesseacry
+library("scDblFinder")
 
 ```
 
@@ -204,6 +205,14 @@ vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) +
 vlplt1 + vlplt2
 ```
 
+```{r}
+
+scef <- scDblFinder(scef)
+
+
+```
+
+
 ##Creating Seurat Object
 
 ```{r}
@@ -358,6 +367,14 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
 
 DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
 ```
+
+```{r}
+
+
+```
+
+
+
 
 
 
