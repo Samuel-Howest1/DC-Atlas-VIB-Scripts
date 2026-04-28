@@ -236,21 +236,20 @@ Mito1 + coord_cartesian(xlim = c(0,10))
 ## Finding Doublets
 ```{r}
 BeforescDbl <- ncol(scef)
-
-
-scef <- scDblFinder(scef)
+scef <- scDblFinder(scef, clusters="cluster") #Verplaats scDblFinder???
 
 ```
 
 ##How many cells were removed during filtering?
 ```{r}
 BeforeFiltering <- ncol(sce)
-AfterscDbl <- ncol(scef)
+AfterscDbl <-  table(scef$scDblFinder.class)
 
 print("How many cells removed?")
 print(paste("Before Filtering",BeforeFiltering))
 print(paste("Before scDblFinder",BeforescDbl))
-print(paste("After scDblFinder",AfterscDbl))
+print(paste("After scDblFinder:"))
+AfterscDbl
 
 
 
@@ -473,7 +472,7 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by 
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
 ```{r}
-
+read.x
 
 
 ```
