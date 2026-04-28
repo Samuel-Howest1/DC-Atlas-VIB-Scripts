@@ -234,23 +234,17 @@ Mito1 + coord_cartesian(xlim = c(0,10))
 ```
 
 
-## Finding Doublets
-```{r}
-BeforescDbl <- ncol(scef)
-scef <- scDblFinder(scef) #,clusters="cluster") #Verplaats scDblFinder???
-
-```
-
 ##How many cells were removed during filtering?
 ```{r}
 BeforeFiltering <- ncol(sce)
-AfterscDbl <-  table(scef$scDblFinder.class)
+AfterFilering <- ncol(scef)
+#AfterscDbl <-  table(scef$scDblFinder.class)
 
 print("How many cells removed?")
 print(paste("Before Filtering",BeforeFiltering))
-print(paste("Before scDblFinder",BeforescDbl))
-print(paste("After scDblFinder:"))
-AfterscDbl
+print(paste("After Filtering",AfterFilering))
+#print(paste("After scDblFinder:"))
+#AfterscDbl
 
 
 
@@ -491,6 +485,35 @@ for(i in 1:totalNrClusters){
 
 ```
 
+## Finding Doublets
+```{r}
+# Make Seuratobject a SingleCellExpirment Object
+Doublets <- as.SingleCellExperiment(seuratObj)
+Doublets$seurat_cluster <- seuratObj$seurat_clusters
+
+# Find the Doublets
+Doublets <- scDblFinder(Doublets, clusters="seurat_cluster") 
+
+#Doublets per Cluster
+dbl <- findDoubletClusters(counts(Doublets), Doublets$seurat_cluster)
+
+
+
+# Add to the Orginal SeuratObject
+seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
+seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
+
+AfterscDbl <-table(seuratObj$scDblFinder_class)
+print(paste("After scDblFinder:"))
+AfterscDbl
+
+# Remove Created object
+rm(Doublets)
+gc()
+
+```
+
+
 ## Control if Mitochondrian gene Precentage for each gene
 ```{r}
 for (i in 1:totalNrClusters){
@@ -503,6 +526,7 @@ for (i in 1:totalNrClusters){
 
 # Goei Cutoffs for Mito gene Precentage --> 10%?
 ```
+
 ##Cluster ADT count
 ```{r}
 for (i in 1:totalNrClusters){
@@ -515,6 +539,7 @@ for (i in 1:totalNrClusters){
 
 # Good Cutoffs also 10%?
 ```
+
 ## Diagnostic Plots
 
 ```{r}
@@ -533,13 +558,16 @@ AnnotData
 for (i in 1:nrow(AnnotData)){
   
   ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
-  
   #Have To split it up because FeaturePlot see list of genes as 1 name
   
   AnnotTitle <- AnnotData$cellName[row.names(AnnotData)==i]
-  p <- FeaturePlot(object = seuratObj, features = c(ExcelMarker), cols = c("grey", "blue"), 
-            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)+ggtitle(AnnotTitle)
+  
+  # Featureplot best used for looking per gene
+  p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
   print(p)
+  
+  #DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
   
   }
 
