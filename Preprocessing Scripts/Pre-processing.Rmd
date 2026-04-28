@@ -25,6 +25,7 @@ library("readr")
 library("ggplot2")
 library("HGNChelper") #For sc_type nesseacry
 library("scDblFinder")
+library("readxl")
 
 ```
 
@@ -469,13 +470,7 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
 
 DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
 ```
-# Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
-```{r}
-
-
-
-```
 
 # After Clustering Filitering (see notes and scripts (general))
 ```{r}
@@ -529,6 +524,21 @@ for (i in 1:totalNrClusters){
 ```
 
 
+# Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
+```{r}
+AnnotData <- read_xlsx(path = "/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx")
+AnnotData
+
+for (i in 1:length(AnnotData$cellName)){
+  ExcelMarker <- AnnotData$geneSymbolmore1[i,]
+  AnnotTitle <- AnnotData$cellName[i,]
+  try({FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)+ggtitle(AnnotTitle)})
+}
+
+
+
+```
 
 
