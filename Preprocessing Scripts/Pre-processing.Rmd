@@ -236,7 +236,7 @@ Mito1 + coord_cartesian(xlim = c(0,10))
 ## Finding Doublets
 ```{r}
 BeforescDbl <- ncol(scef)
-scef <- scDblFinder(scef, clusters="cluster") #Verplaats scDblFinder???
+scef <- scDblFinder(scef) #,clusters="cluster") #Verplaats scDblFinder???
 
 ```
 
@@ -367,8 +367,8 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 ```{r}
 
 ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE)
-ClusterRNA<-ClusterRNA6[order(ClusterRNA6$p_val_adj, decreasing = FALSE), ]
-head(ClusterRNA6, n = 6)
+ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
+head(ClusterRNA, n = 6)
 
 
 ```
@@ -472,13 +472,14 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by 
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
 ```{r}
-read.x
+
 
 
 ```
 
 # After Clustering Filitering (see notes and scripts (general))
 ```{r}
+
 
 
 ```
