@@ -479,11 +479,54 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by 
 
 # After Clustering Filitering (see notes and scripts (general))
 ```{r}
+# Top Markers per Cluster
+totalNrClusters<-max(as.numeric(names(table(ClusterRNA$cluster))))
+BioMarkerList <- list()
+
+for(i in 1:totalNrClusters){
+  tmp <- ClusterRNA[ClusterRNA$cluster==i,]
+  tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC
+  BioMarkerList[[i]]<-tmp[order(tmp$score, decreasing=TRUE),] #Already sorted by score
+  TopMarkersperCluster <- list(head(BioMarkerList[[i]]$gene))
+  print(paste("Top Markers of Cluster:",i,"=", TopMarkersperCluster))
+}
+
+#tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC?? Score voor biomarkers
+# Sort by Frequencie?
+
+```
+
+## Control if Mitochondrian gene Precentage for each gene
+```{r}
+for (i in 1:totalNrClusters){
+  TotalGenePerCluster <- length(BioMarkerList[[i]]$gene)
+  is.mito.per.Cluster <- grepl("^MT-", rownames(BioMarkerList[[i]]), ignore.case = TRUE)
+  PrecentageMitoPerCluster <- round((sum(is.mito.per.Cluster)/TotalGenePerCluster)*100,digits = 3)
+  print(paste("Cluster",i,"Precentage Mitchondriale =",PrecentageMitoPerCluster))
+}
+
+
+# Goei Cutoffs for Mito gene Precentage --> 10%?
+```
+##Cluster ADT count
+```{r}
+for (i in 1:totalNrClusters){
+  TotalADTPerCluster <- length(ClusterADT6$gene[ClusterADT6$cluster==i])
+  TotalGenePerCluster <- length(BioMarkerList[[i]]$cluster)
+
+  PrecentageADT <- round((sum(TotalADTPerCluster)/TotalGenePerCluster)*100,digits = 3)
+  print(paste("Cluster",i,"Precentage ADT count compared to Cluster count =",PrecentageADT))
+}
+
+# Good Cutoffs also 10%?
+```
+## Diagnostic Plots
+
+```{r}
 
 
 
 ```
-
 
 
 
