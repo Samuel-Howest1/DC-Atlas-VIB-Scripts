@@ -530,13 +530,20 @@ for (i in 1:totalNrClusters){
 AnnotData <- read_xlsx(path = "/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx")
 AnnotData
 
-for (i in 1:length(AnnotData$cellName)){
-  ExcelMarker <- AnnotData$geneSymbolmore1[i,]
-  AnnotTitle <- AnnotData$cellName[i,]
-  try({FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
-            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)+ggtitle(AnnotTitle)})
-}
+for (i in 1:nrow(AnnotData)){
+  
+  ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
+  
+  #Have To split it up because FeaturePlot see list of genes as 1 name
+  
+  AnnotTitle <- AnnotData$cellName[row.names(AnnotData)==i]
+  p <- FeaturePlot(object = seuratObj, features = c(ExcelMarker), cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)+ggtitle(AnnotTitle)
+  print(p)
+  
+  }
 
+ExcelMarker
 
 
 ```
