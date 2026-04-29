@@ -26,7 +26,7 @@ library("ggplot2")
 library("HGNChelper") #For sc_type nesseacry
 library("scDblFinder")
 library("readxl")
-
+library("patchwork")
 ```
 
 ```{r}
@@ -269,8 +269,8 @@ cells.to.keep <- colnames(scef)
 seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment, min.cells=1)
 
 #Adding scDblFinder data to the Seuratobject
-seuratObj$scDblFinder.score <- scef$scDblFinder.score
-seuratObj$scDblFinder.class <- scef$scDblFinder.class
+#seuratObj$scDblFinder.score <- scef$scDblFinder.score
+#seuratObj$scDblFinder.class <- scef$scDblFinder.class
 
 # Removing Object for performance
 rm(rawDataFiltered)
@@ -323,7 +323,7 @@ print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
 
 ```
 
-##Finding Best Clustering of cells
+##Finding Best Dimension Clustering of cells
 
 ```{r}
 # Test more than 14 dimensions (see example script)
@@ -347,6 +347,7 @@ for(i in ListDims){
   print(UMAPgraph)
 }
 ```
+## Loop For best Resolution of the found dims
 
 # Best Clustering of cells
 ```{r}
@@ -495,18 +496,27 @@ Doublets$seurat_cluster <- seuratObj$seurat_clusters
 Doublets <- scDblFinder(Doublets, clusters="seurat_cluster") 
 
 #Doublets per Cluster
-dbl <- findDoubletClusters(counts(Doublets), Doublets$seurat_cluster)
+#dbl <- findDoubletClusters(counts(Doublets), Doublets$seurat_cluster)
 
-
+# Work within Seuratobject to compare cluster to scDblFinder.class
 
 # Add to the Orginal SeuratObject
 seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
 seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
 
+
+cellsNames <- droplevels(seuratObj$seurat_clusters)
+TrueDoubles <- seuratObj$scDblFinder_class
+
+
+ClusterDoublets <- as.data.frame(
+  table(cellsNames[TrueDoubles == "doublet"])
+)
+
 AfterscDbl <-table(seuratObj$scDblFinder_class)
 print(paste("After scDblFinder:"))
 AfterscDbl
-
+ClusterDoublets
 # Remove Created object
 rm(Doublets)
 gc()
@@ -516,28 +526,72 @@ gc()
 
 ## Control if Mitochondrian gene Precentage for each gene
 ```{r}
+#Empty Vector
+PlotPercentageMito<- c()
+
+
 for (i in 1:totalNrClusters){
   TotalGenePerCluster <- length(BioMarkerList[[i]]$gene)
   is.mito.per.Cluster <- grepl("^MT-", rownames(BioMarkerList[[i]]), ignore.case = TRUE)
   PrecentageMitoPerCluster <- round((sum(is.mito.per.Cluster)/TotalGenePerCluster)*100,digits = 3)
+  
+  # To keep all the numbers for the plot
+  PlotPercentageMito <- c(PlotPercentageMito,PrecentageMitoPerCluster)
+
   print(paste("Cluster",i,"Precentage Mitchondriale =",PrecentageMitoPerCluster))
 }
+#Ploting the data
+ClusterMitoPerPlot <- data.frame(Cluster = seq(1:totalNrClusters),
+                                 PercentageMito=PlotPercentageMito)
+  
+  ggplot(ClusterMitoPerPlot, aes(x=Cluster, y = PercentageMito)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+    labs(
+      title = "Percentage Mitochondrian genes per Cluster",
+      x = "Cluster",
+      y = "Percentage Mitochondrian (%)"
+    )
 
 
 # Goei Cutoffs for Mito gene Precentage --> 10%?
+# Show on the plot (Aantonen als mit gene geconcentreed zijn)
 ```
 
 ##Cluster ADT count
 ```{r}
+PlotPercentageADT <- c()
+
 for (i in 1:totalNrClusters){
+  
   TotalADTPerCluster <- length(ClusterADT6$gene[ClusterADT6$cluster==i])
   TotalGenePerCluster <- length(BioMarkerList[[i]]$cluster)
-
+  
+  # Divede the ADT count with the total gene count per cluster and round to 3 digits
   PrecentageADT <- round((sum(TotalADTPerCluster)/TotalGenePerCluster)*100,digits = 3)
+  
+  # To keep all the numbers for the plot
+  PlotPercentageADT <- c(PlotPercentageADT,PrecentageADT)
+  
   print(paste("Cluster",i,"Precentage ADT count compared to Cluster count =",PrecentageADT))
 }
 
+#Ploting the data
+ClusterADTPPerPlot <- data.frame(Cluster = seq(1:totalNrClusters),
+                                 PercentageADT=PlotPercentageADT)
+  
+  ggplot(ClusterADTPPerPlot, aes(x= Cluster ,y = PercentageADT)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+    labs(
+      title = "Percentage ADT per Cluster",
+      x = "Cluster",
+      y = "Percentage ADT (%)"
+    )
+
+
 # Good Cutoffs also 10%?
+# Ploten on RNA_UMAP and ADT_UMAP
 ```
 
 ## Diagnostic Plots
@@ -555,6 +609,8 @@ for (i in 1:totalNrClusters){
 AnnotData <- read_xlsx(path = "/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx")
 AnnotData
 
+plot_list <- list()
+
 for (i in 1:nrow(AnnotData)){
   
   ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
@@ -563,16 +619,21 @@ for (i in 1:nrow(AnnotData)){
   AnnotTitle <- AnnotData$cellName[row.names(AnnotData)==i]
   
   # Featureplot best used for looking per gene
+  print(AnnotTitle)
+  
   p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
             reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
-  print(p)
   
-  #DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
+  p_combined <- wrap_plots(p, ncol=2) + plot_annotation(title = AnnotTitle)
   
+  plot_list[[i]] <- p_combined
+  
+  print(plot_list[[i]])
+   
   }
 
 ExcelMarker
-
+# Look for Seurat Function Module to bring all gene togheter in 1 plot
 
 ```
 
