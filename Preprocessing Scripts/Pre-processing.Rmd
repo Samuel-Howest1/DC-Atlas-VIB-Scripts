@@ -746,7 +746,6 @@ seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
 Idents(seuratObj) <- seuratObj$seurat_selected_clusters
 
 
-# Zoom in on seleceted cluster
 DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 
