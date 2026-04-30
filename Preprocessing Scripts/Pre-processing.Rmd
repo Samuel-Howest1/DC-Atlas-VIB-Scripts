@@ -752,5 +752,21 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```
 
+## Removing Selecetd cluster cluster of choice
 
+```{r}
+
+seuratObj$seurat_selected_clusters
+
+seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
+
+#Remove specific cluster (Change idents to choose which cluster to remove)
+ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
+seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
+
+
+
+DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
+
+```
 
