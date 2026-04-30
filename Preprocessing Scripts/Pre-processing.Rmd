@@ -352,6 +352,11 @@ for(i in ListDims){
   UMAPTitle <- paste0("UMAP Number = ",StartingDims)
   UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")+ggtitle(UMAPTitle)
   print(UMAPgraph)
+  
+  
+  #Test Clustree
+  clustree(seuratObj, prefix = "RNA_snn_res.")
+
 }
 ```
 ## Loop For best Resolution of the found dims
@@ -673,12 +678,14 @@ ExcelMarker
 
 selected <- CellSelector(DimPlot(seuratObj))
 
+#selected2 <- CellSelector(DimPlot(seuratObj), ident = 8) 
+
 ```
 
 
 
 
-## Manual Cluster selection (Selection of WHole Cluster)
+## Manual Cluster selection (Selection of Whole Cluster)
 
 Functions
 ```{r}
@@ -705,9 +712,20 @@ ClusterData <- seuratObj@meta.data
 UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
 
 #Color Cluster Number?
-ColorIdent <- 4
+ColorIdent <- 8
 
 wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
 colorSomeCells(ClusterData, UMAPTable, wantedCells)
 
 ```
+
+
+```{r}
+
+
+
+
+```
+
+
+
