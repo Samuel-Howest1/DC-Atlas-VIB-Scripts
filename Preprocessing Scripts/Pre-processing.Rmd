@@ -350,7 +350,7 @@ for(i in ListDims){
   
   #Title for UMap
   UMAPTitle <- paste0("UMAP Number = ",StartingDims)
-  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")+ggtitle(UMAPTitle)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
   print(UMAPgraph)
   
   
@@ -375,7 +375,7 @@ for(i in LoopRes){
   
   #Title for UMap
   UMAPTitle <- paste0("Resolution Number = ",i)
-  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")+ggtitle(UMAPTitle)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
   print(UMAPgraph)
 }
 
@@ -391,7 +391,7 @@ for(i in LoopRes){
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
   seuratObj <- FindClusters(seuratObj, resolution = 0.7)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
-  DimPlot(seuratObj, reduction = "RNA_umap")
+  DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
 ```
 
 ##Finding Cluster Biomarkers
@@ -457,7 +457,7 @@ for(i in ListDimsADT){
   
   #Title for UMap
   UMAPTitleADT <- paste0("UMAP Number = ",StartingDimsADT)
-  UMAPgraphADT  <-DimPlot(seuratObj, reduction = "ADT_umap")+ggtitle(UMAPTitleADT)
+  UMAPgraphADT  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitleADT)
   print(UMAPgraphADT)
 }
 
@@ -469,7 +469,7 @@ seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 # UMAP
 seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca", reduction.name ="ADT_umap" )
-DimPlot(seuratObj, reduction = "ADT_umap")
+DimPlot(seuratObj, reduction = "ADT_umap", label = T, repel = T, label.size = 4)
 
 #Finding Markers
 
@@ -721,8 +721,33 @@ colorSomeCells(ClusterData, UMAPTable, wantedCells)
 
 
 ```{r}
+#Make number for new cluster
+totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
+NewNrClusters <- totalNrClusters + 1
 
 
+# Put orignal cluster assigments of cells
+seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
+
+seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
+
+######################### Werkt ma cluste naam is NA ##############################
+# Replace the old Cluster number of the seleced cell with the new one
+#new_levels <- c(levels(seuratObj$seurat_clusters), as.character(NewNrClusters))
+
+#seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters, levels = new_levels)
+########################################################################################
+
+# 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
+
+seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
+
+#Activate the new selected clusters
+Idents(seuratObj) <- seuratObj$seurat_selected_clusters
+
+
+# Zoom in on seleceted cluster
+DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 
 ```
