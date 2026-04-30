@@ -27,6 +27,13 @@ library("HGNChelper") #For sc_type nesseacry
 library("scDblFinder")
 library("readxl")
 library("patchwork")
+#library("presto") Already part of seurat starting form V5 
+# issue downloading presto --> use following commands:
+#pak::pak("RcppArmadillo@0.12.8.0.0", ask = FALSE)
+#.rs.restartR()
+#pak::pak("immunogenomics/presto")
+library("clustree") # Note:Be sure you have the 4.5 version of Rtools
+
 ```
 
 ```{r}
@@ -349,11 +356,35 @@ for(i in ListDims){
 ```
 ## Loop For best Resolution of the found dims
 
-# Best Clustering of cells
 ```{r}
 
+LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
+
+# Fill in the BEST dims found form the pervious chunck(NOTE: 2 dims=1:? to fill in)!
+for(i in LoopRes){
+  
+  #Creating Mulitple Cluster Maps with Different Resolutions
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = i)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  
+  #Title for UMap
+  UMAPTitle <- paste0("Resolution Number = ",i)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap")+ggtitle(UMAPTitle)
+  print(UMAPgraph)
+}
+
+
+# Best Resolution for SAM2 =0.7
+
+```
+
+
+# Best Clustering of cells
+```{r}
+#Put the best Dims and Resolution here in this graph 
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
-  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- FindClusters(seuratObj, resolution = 0.7)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   DimPlot(seuratObj, reduction = "RNA_umap")
 ```
@@ -362,7 +393,7 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 
 ```{r}
 
-ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE)
+ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
 ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
 head(ClusterRNA, n = 6)
 
@@ -637,4 +668,46 @@ ExcelMarker
 
 ```
 
+## Manual Cluster slection Seurat Manier
+```{r}
 
+selected <- CellSelector(DimPlot(seuratObj))
+
+```
+
+
+
+
+## Manual Cluster selection (Selection of WHole Cluster)
+
+Functions
+```{r}
+colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
+  clusterMatrix$toColor=FALSE
+  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
+  
+  p1 <- ggplot()+
+    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
+    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
+  
+  return(p1)
+}
+
+
+
+```
+
+Selection
+```{r}
+ClusterData <- seuratObj@meta.data
+UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
+
+#Color Cluster Number?
+ColorIdent <- 4
+
+wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
+colorSomeCells(ClusterData, UMAPTable, wantedCells)
+
+```
