@@ -352,12 +352,11 @@ for(i in ListDims){
   UMAPTitle <- paste0("UMAP Number = ",StartingDims)
   UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
   print(UMAPgraph)
-  
-  
-  #Test Clustree
-  clustree(seuratObj, prefix = "RNA_snn_res.")
 
 }
+
+
+
 ```
 ## Loop For best Resolution of the found dims
 
@@ -379,6 +378,8 @@ for(i in LoopRes){
   print(UMAPgraph)
 }
 
+#Test Clustree
+  #clustree(seuratObj, prefix = "RNA_snn_res.")
 
 # Best Resolution for SAM2 =0.7
 
@@ -685,7 +686,7 @@ selected <- CellSelector(DimPlot(seuratObj))
 
 
 
-## Manual Cluster selection (Selection of Whole Cluster)
+## Manual Cluster selection (Selection of Whole Cluster) (Is dit nog Nodig?)
 
 Functions
 ```{r}
