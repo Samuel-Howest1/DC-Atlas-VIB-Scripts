@@ -379,7 +379,7 @@ for(i in LoopRes){
 }
 
 #Test Clustree
-  #clustree(seuratObj, prefix = "RNA_snn_res.")
+  clustree(seuratObj, prefix = "RNA_snn_res.")
 
 # Best Resolution for SAM2 =0.7
 
@@ -512,7 +512,11 @@ BioMarkerList <- list()
 
 for(i in 1:totalNrClusters){
   tmp <- ClusterRNA[ClusterRNA$cluster==i,]
-  tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC
+  # Scoring
+  # pct 1 percentage cell in the cluster that express that gene
+  # pct 2 percentage cell in other clusters that express that gene
+  # avg_log2FC is a weight to add to score
+  tmp$score<-tmp$pct.1/(tmp$pct.2+0.001)*tmp$avg_log2FC
   BioMarkerList[[i]]<-tmp[order(tmp$score, decreasing=TRUE),] #Already sorted by score
   TopMarkersperCluster <- list(head(BioMarkerList[[i]]$gene))
   print(paste("Top Markers of Cluster:",i,"=", TopMarkersperCluster))
@@ -542,6 +546,10 @@ seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
 seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
 
 
+FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+
+
+
 cellsNames <- droplevels(seuratObj$seurat_clusters)
 TrueDoubles <- seuratObj$scDblFinder_class
 
@@ -549,7 +557,7 @@ TrueDoubles <- seuratObj$scDblFinder_class
 ClusterDoublets <- as.data.frame(
   table(cellsNames[TrueDoubles == "doublet"])
 )
-
+# ADD percentage !!!
 AfterscDbl <-table(seuratObj$scDblFinder_class)
 print(paste("After scDblFinder:"))
 AfterscDbl
@@ -563,32 +571,9 @@ gc()
 
 ## Control if Mitochondrian gene Precentage for each gene
 ```{r}
-#Empty Vector
-PlotPercentageMito<- c()
+seuratObj[["percent.mt"]] <- PercentageFeatureSet(seuratObj, pattern = "^mt-")
 
-
-for (i in 1:totalNrClusters){
-  TotalGenePerCluster <- length(BioMarkerList[[i]]$gene)
-  is.mito.per.Cluster <- grepl("^MT-", rownames(BioMarkerList[[i]]), ignore.case = TRUE)
-  PrecentageMitoPerCluster <- round((sum(is.mito.per.Cluster)/TotalGenePerCluster)*100,digits = 3)
-  
-  # To keep all the numbers for the plot
-  PlotPercentageMito <- c(PlotPercentageMito,PrecentageMitoPerCluster)
-
-  print(paste("Cluster",i,"Precentage Mitchondriale =",PrecentageMitoPerCluster))
-}
-#Ploting the data
-ClusterMitoPerPlot <- data.frame(Cluster = seq(1:totalNrClusters),
-                                 PercentageMito=PlotPercentageMito)
-  
-  ggplot(ClusterMitoPerPlot, aes(x=Cluster, y = PercentageMito)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-    labs(
-      title = "Percentage Mitochondrian genes per Cluster",
-      x = "Cluster",
-      y = "Percentage Mitochondrian (%)"
-    )
+FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
 
 
 # Goei Cutoffs for Mito gene Precentage --> 10%?
@@ -597,47 +582,28 @@ ClusterMitoPerPlot <- data.frame(Cluster = seq(1:totalNrClusters),
 
 ##Cluster ADT count
 ```{r}
-PlotPercentageADT <- c()
 
-for (i in 1:totalNrClusters){
-  
-  TotalADTPerCluster <- length(ClusterADT6$gene[ClusterADT6$cluster==i])
-  TotalGenePerCluster <- length(BioMarkerList[[i]]$cluster)
-  
-  # Divede the ADT count with the total gene count per cluster and round to 3 digits
-  PrecentageADT <- round((sum(TotalADTPerCluster)/TotalGenePerCluster)*100,digits = 3)
-  
-  # To keep all the numbers for the plot
-  PlotPercentageADT <- c(PlotPercentageADT,PrecentageADT)
-  
-  print(paste("Cluster",i,"Precentage ADT count compared to Cluster count =",PrecentageADT))
-}
+FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
 
-#Ploting the data
-ClusterADTPPerPlot <- data.frame(Cluster = seq(1:totalNrClusters),
-                                 PercentageADT=PlotPercentageADT)
-  
-  ggplot(ClusterADTPPerPlot, aes(x= Cluster ,y = PercentageADT)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-    labs(
-      title = "Percentage ADT per Cluster",
-      x = "Cluster",
-      y = "Percentage ADT (%)"
-    )
+
+# nCount total ADT per cell
+# nfeature how many different ADT per cell 
+# Use nfeatuere ADT to calculate average ADT per cluster
+# nfeaute let op probleem dat lage cell kwaliteit een hoge count hebben door veel makkelijke bindingen
+
+# FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+#Gebruik nfeauter metafa data in the featureplot to make graph
+
 
 
 # Good Cutoffs also 10%?
 # Ploten on RNA_UMAP and ADT_UMAP
 ```
+# Markdown note for Datasets
 
-## Diagnostic Plots
+SAM2: Doublets graph conc --> remove ---> show which cell type
 
-```{r}
-
-
-
-```
+SAM3:
 
 
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
@@ -674,99 +640,17 @@ ExcelMarker
 
 ```
 
-## Manual Cluster slection Seurat Manier
+
+#STop
+
+
+## Saving R object
 ```{r}
-
-selected <- CellSelector(DimPlot(seuratObj))
-
-#selected2 <- CellSelector(DimPlot(seuratObj), ident = 8) 
+# Save Object with everything Before Post-Processing
+# Save object with everything after Post- Processing
+# Save Object with only (Mig and resident) CDC 1
 
 ```
 
 
-
-
-## Manual Cluster selection (Selection of Whole Cluster) (Is dit nog Nodig?)
-
-Functions
-```{r}
-colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
-  clusterMatrix$toColor=FALSE
-  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
-  
-  p1 <- ggplot()+
-    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
-    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
-    theme_classic() +
-    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
-  
-  return(p1)
-}
-
-
-
-```
-
-Selection
-```{r}
-ClusterData <- seuratObj@meta.data
-UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
-
-#Color Cluster Number?
-ColorIdent <- 8
-
-wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
-colorSomeCells(ClusterData, UMAPTable, wantedCells)
-
-```
-
-
-```{r}
-#Make number for new cluster
-totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
-NewNrClusters <- totalNrClusters + 1
-
-
-# Put orignal cluster assigments of cells
-seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
-
-seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
-
-######################### Werkt ma cluste naam is NA ##############################
-# Replace the old Cluster number of the seleced cell with the new one
-#new_levels <- c(levels(seuratObj$seurat_clusters), as.character(NewNrClusters))
-
-#seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters, levels = new_levels)
-########################################################################################
-
-# 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
-
-seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
-
-#Activate the new selected clusters
-Idents(seuratObj) <- seuratObj$seurat_selected_clusters
-
-
-DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
-
-
-```
-
-## Removing Selecetd cluster cluster of choice
-
-```{r}
-
-seuratObj$seurat_selected_clusters
-
-seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
-
-#Remove specific cluster (Change idents to choose which cluster to remove)
-ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
-seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
-
-
-
-DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
-
-```
 

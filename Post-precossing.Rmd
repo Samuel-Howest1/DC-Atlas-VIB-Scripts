@@ -1,0 +1,111 @@
+---
+title: "Post-precossing"
+output: html_document
+---
+
+#Post-Processing
+
+After Basic filtering of data we want to take a closer look at each cluster that and see where further processing is necessary 
+
+
+
+MOVED CHUNCK FORM PRE-processing
+
+## Manual Cluster slection Seurat Manier
+```{r}
+
+selected <- CellSelector(DimPlot(seuratObj))
+#selected2 <- CellSelector(DimPlot(seuratObj), ident = 8) 
+
+```
+
+
+
+
+## Manual Cluster selection (Selection of Whole Cluster) (Is dit nog Nodig?)
+
+Functions
+```{r}
+colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
+  clusterMatrix$toColor=FALSE
+  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
+  
+  p1 <- ggplot()+
+    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
+    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
+  
+  return(p1)
+}
+
+
+
+```
+
+Selection
+```{r}
+ClusterData <- seuratObj@meta.data
+UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
+
+#Color Cluster Number?
+ColorIdent <- 1
+
+wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
+colorSomeCells(ClusterData, UMAPTable, wantedCells)
+
+```
+
+
+```{r}
+#Make number for new cluster
+totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
+NewNrClusters <- totalNrClusters + 1
+
+
+# Put orignal cluster assigments of cells
+seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
+
+seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
+
+######################### Werkt ma cluste naam is NA ##############################
+# Replace the old Cluster number of the seleced cell with the new one
+#new_levels <- c(levels(seuratObj$seurat_clusters), as.character(NewNrClusters))
+
+#seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters, levels = new_levels)
+########################################################################################
+
+# 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
+
+seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
+
+#Activate the new selected clusters
+Idents(seuratObj) <- seuratObj$seurat_selected_clusters
+
+
+DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
+
+
+```
+
+## Removing Selecetd cluster cluster of choice
+
+```{r}
+# Remove Selected
+seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
+
+#Remove specific cluster (Change idents to choose which cluster to remove)
+# ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
+# seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
+
+
+
+DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
+
+
+
+
+
+# Saving RDS object
+
+
