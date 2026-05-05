@@ -49,10 +49,12 @@ library("clustree") # Note:Be sure you have the 4.5 version of Rtools
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
-rawDataRNA <- as.matrix(rawData$`Gene Expression`)
+rawDataRNA <- rawData[["Gene Expression"]]
+# rawDataRNA <- as.matrix(rawData$Gene Expression) Keeps all Zero values, but makes object to big for current pc
+
 # Rawdata is 6.1 GB, it can be loaded but not examined ---> Took a subset of cells
 # rawDataRNA <- rawDataRNA[, 1:2000]
 
@@ -389,9 +391,10 @@ for(i in LoopRes){
 }
 
 #Test Clustree
-  clustree(seuratObj, prefix = "RNA_snn_res.")
-
+  Tree <- clustree(seuratObj, prefix = "RNA_snn_res.")
+Tree
 # Best Resolution for SAM2 =0.7
+# Best Resolution for SAM3 =0.6
 
 ```
 
@@ -400,7 +403,7 @@ for(i in LoopRes){
 ```{r}
 #Put the best Dims and Resolution here in this graph 
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
-  seuratObj <- FindClusters(seuratObj, resolution = 0.7)
+  seuratObj <- FindClusters(seuratObj, resolution = 0.6)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   BestCluster <- DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
   BestCluster
@@ -634,7 +637,7 @@ for (i in 1:nrow(AnnotData)){
   p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
             reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
   
-  p_combined <- wrap_plots(p, ncol=2) + plot_annotation(title = AnnotTitle)
+  p_combined <- p + plot_annotation(title = AnnotTitle)
   
   plot_list[[i]] <- p_combined
   
@@ -663,7 +666,7 @@ ADT: No obvious problems
 ## Saving R object
 ```{r}
 # Save Object with everything Before Post-Processing
-#saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
+saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
 # Saving Graphs
 pdf(paste0("Graphs_Pre-Process_",FileName))
 sctplt1 
@@ -672,6 +675,7 @@ hist1
 hist2
 vlplt1 + vlplt2
 Elbow
+Tree
 BestCluster
 AnnotClust
 DoubletsMap
