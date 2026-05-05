@@ -1,7 +1,16 @@
 ---
 title: "Pre-processing"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
+```r
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
 
 Pre-processing of CITE-seq data This Script is the first and will be used to pre-process SAM2 Provided data
 
@@ -41,10 +50,11 @@ library("clustree") # Note:Be sure you have the 4.5 version of Rtools
 #RNA
 ############################################
 setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- as.matrix(rawData$`Gene Expression`)
 # Rawdata is 6.1 GB, it can be loaded but not examined ---> Took a subset of cells
-rawDataRNA <- rawDataRNA[, 1:2000]
+# rawDataRNA <- rawDataRNA[, 1:2000]
 
 ```
 
@@ -318,8 +328,8 @@ seuratObj <- RunPCA(seuratObj,
 
 ```{r}
 
-ElbowPlot(seuratObj, reduction = "RNA_pca")
-
+Elbow <- ElbowPlot(seuratObj, reduction = "RNA_pca")
+Elbow
 # Results SAM2: Use 14 Dimension
 ```
 
@@ -392,7 +402,8 @@ for(i in LoopRes){
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
   seuratObj <- FindClusters(seuratObj, resolution = 0.7)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
-  DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
+  BestCluster <- DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
+  BestCluster
 ```
 
 ##Finding Cluster Biomarkers
@@ -500,7 +511,8 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
 # MARKERS: General CDC
 # MARKERS: CDC1 and 2 , Migetory and Profilatrate
 
-DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')        
+ AnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
+ AnnotClust
 ```
 
 
@@ -546,8 +558,8 @@ seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
 seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
 
 
-FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
-
+ DoubletsMap <- FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+DoubletsMap
 
 
 cellsNames <- droplevels(seuratObj$seurat_clusters)
@@ -573,8 +585,8 @@ gc()
 ```{r}
 seuratObj[["percent.mt"]] <- PercentageFeatureSet(seuratObj, pattern = "^mt-")
 
-FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
-
+MitoMap <- FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+MitoMap
 
 # Goei Cutoffs for Mito gene Precentage --> 10%?
 # Show on the plot (Aantonen als mit gene geconcentreed zijn)
@@ -583,8 +595,8 @@ FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue
 ##Cluster ADT count
 ```{r}
 
-FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
-
+ ADTMap <- FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+ADTMap
 
 # nCount total ADT per cell
 # nfeature how many different ADT per cell 
@@ -599,11 +611,6 @@ FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "bl
 # Good Cutoffs also 10%?
 # Ploten on RNA_UMAP and ADT_UMAP
 ```
-# Markdown note for Datasets
-
-SAM2: Doublets graph conc --> remove ---> show which cell type
-
-SAM3:
 
 
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
@@ -641,12 +648,38 @@ ExcelMarker
 ```
 
 
-#STop
+# Markdown note for Datasets
+
+SAM2:
+
+Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically.
+Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley  of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type 
+Mito: No obvious problems
+ADT: No obvious problems
+
+
 
 
 ## Saving R object
 ```{r}
 # Save Object with everything Before Post-Processing
+#saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
+# Saving Graphs
+pdf(paste0("Graphs_Pre-Process_",FileName))
+sctplt1 
+sctplt2
+hist1 
+hist2
+vlplt1 + vlplt2
+Elbow
+BestCluster
+AnnotClust
+DoubletsMap
+MitoMap
+ADTMap
+plot_list
+
+dev.off()
 # Save object with everything after Post- Processing
 # Save Object with only (Mig and resident) CDC 1
 

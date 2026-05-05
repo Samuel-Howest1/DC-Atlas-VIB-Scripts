@@ -3,6 +3,8 @@ title: "Post-precossing"
 output: html_document
 ---
 
+
+
 #Post-Processing
 
 After Basic filtering of data we want to take a closer look at each cluster that and see where further processing is necessary 
@@ -57,6 +59,8 @@ colorSomeCells(ClusterData, UMAPTable, wantedCells)
 ```
 
 
+
+## Adding A cluster
 ```{r}
 #Make number for new cluster
 totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
@@ -68,12 +72,6 @@ seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
 
 seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
 
-######################### Werkt ma cluste naam is NA ##############################
-# Replace the old Cluster number of the seleced cell with the new one
-#new_levels <- c(levels(seuratObj$seurat_clusters), as.character(NewNrClusters))
-
-#seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters, levels = new_levels)
-########################################################################################
 
 # 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -88,24 +86,50 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```
 
-## Removing Selecetd cluster cluster of choice
+## Removing Selecetd cluster or cluster of choice
 
 ```{r}
 # Remove Selected
 seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
-
 #Remove specific cluster (Change idents to choose which cluster to remove)
 # ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
 # seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
 
-
-
 DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
+```
+
+#Annontation Post-Processing
+```{r}
+
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_wrapper.R"); 
+seuratObj <- run_sctype(seurat_object = seuratObj,
+                     assay = "RNA",
+                     scaled = TRUE,
+                     known_tissue_type="Immune system",
+                     custom_marker_file="/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx",
+                     name="sctype_classification")
+
+# MARKERS: General CDC
+# MARKERS: CDC1 and 2 , Migetory and Profilatrate
+
+ PostAnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
+ PostAnnotClust
 
 
+```
 
 
-# Saving RDS object
+```{r}
+#Saving Object
+saveRDS(seuratObj,paste0("SeuratObj_Post-Process_",FileName) )
+
+pdf(paste0("Graphs Before and after Post-Process_",FileName))
+AnnotClust
+PostAnnotClust
+dev.off()
+
+
+```
 
 
