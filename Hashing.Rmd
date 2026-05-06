@@ -4,45 +4,229 @@ output: html_document
 ---
 # Use Multiplex Demux
 
-#Hashing
+```{r}
+## Packages
+library("tidyverse")
+library("Seurat")
+library("SingleCellExperiment")
+library("scater")
+library("data.table")
+library("ggpubr")
+library("gridExtra")
+library("fitdistrplus") 
+library("dplyr")
+library("plyr")
+library("caret")
+library("openxlsx")
+library("ggplot2")
+library("tibble")
+library("scran")
+library("limma")
+library("ggrepel")
+library("intrinsicDimension")
+library("tidyr")
+library("purrr")
+library("ggrepel")
+library("clustree")
+library("limma")
+library("patchwork")
+library("future")
+library('RColorBrewer')
 
-NEEDED FOR HASHING COMPARISON
-png(filename = paste0(output.dir,"Plots/HTO/","08_umap_HTO_compare",".png"), width = 1500, height = 1000)
+```
+
+
+
+
+#Hashing Loading in HTO matrix
+
+```{r}
+#Load Seurat object
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
+FileName <- basename(getwd())
+
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/SeuratObj_Pre-Process_",FileName))
+
+# Load HTO Matrix and add to the seuratobject
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
+FileName <- basename(getwd())
+rawData <- Read10X("filtered_feature_bc_matrix")
+rawDataHTO <- rawData[["Custom"]]
+
+Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
+
+rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
+
+#Filter the Seuratobject To remove Hashtag without cells
+HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
+rawDataHTO <- rawDataHTO[HTO_Above_0, ]
+
+
+seuratObj[["HTO"]] <- CreateAssayObject(counts = rawDataHTO[,colnames(seuratObj)] ,min.cells = 1)
+
+
+```
+
+
+## Normalize HTO data
+```{r}
+seuratObj <- NormalizeData(seuratObj, assay = "HTO", normalization.method = "CLR")
+
+# To check HTO
+# FeaturePlot(seuratObj, features="Hashtag1", pt.size=0.10,label.size = 8,order=T)
+```
+
+## Dimension reduction (VOOR OF NA DEMulitplexing)
+```{r}
+
+VariableFeatures(seuratObj, assay = "HTO") <- rownames(seuratObj[["HTO"]])
+
+seuratObj <- ScaleData(seuratObj, assay = "HTO" )
+seuratObj <- RunPCA(object = seuratObj, assay = "HTO", features = VariableFeatures(seuratObj, assay = "HTO"), 
+                    npcs = nrow(seuratObj@assays$ADT), ndims.print = 1:5, nfeatures.print = 8,
+                    reduction.name = "HTO_pca",reduction.key = "htoPC_")
+
+Elbow <- ElbowPlot(seuratObj, reduction = "HTO_pca")
+Elbow
+
+seuratObj <- RunUMAP(seuratObj, dims = 1:10,assay = "HTO", reduction ="HTO_pca",
+                       reduction.name = "HTO_umap", reduction.key = "HTOUMAP_")
+# ???? Wat moet ik hier uit halen
+DimPlot(seuratObj, reduction = "HTO_umap",label = T, repel = T, label.size = 4)
+```
+## Demultiplexing
+```{r}
+#SAM05 there are cell with no hashtags
+
+seuratObj <- MULTIseqDemux(seuratObj, assay = "HTO", autoThresh = T,maxiter=5,qrange = seq(from = 0.1, to =  0.9, by =0.05))
+```
+
+## Creating Metadata (Provided by VIB)
+```{r}
+# creating of HTO.data, the metadata
+HTO.data <- as.data.frame(t(as.matrix(GetAssayData(object = seuratObj, assay = "HTO", layer  = "counts")))) #hashcounts
+HTO.data.raw <- HTO.data
+features <- colnames(HTO.data.raw) #hashtags
+HTO.data$maxHTO <- apply(HTO.data.raw,1,which.max) #max hash
+HTO.data <- mutate(HTO.data,maxHTO=features[maxHTO])
+HTO.data$maxval <- apply(HTO.data.raw,1,max)
+sec.fun <- function(x){features[order(x)[length(x)-1]]}
+secval.fun <- function(x){x[order(x)[length(x)-1]]}
+HTO.data$secHTO <- apply(HTO.data.raw,1,sec.fun)
+HTO.data$secval <- apply(HTO.data.raw,1,secval.fun)
+HTO.data$nUMI <- seuratObj$nCount_RNA
+HTO.data$nGene <- seuratObj$nFeature_RNA
+HTO.data$cell <- rownames(HTO.data.raw)
+
+#Multiplex Metadata
+HTO.data$Multi_label <- seuratObj$MULTI_ID
+HTO.data$Multi_glob <- seuratObj$MULTI_classification
+HTO.data$Multi_class <- HTO.data$Multi_label
+levels(HTO.data$Multi_class) <- ifelse(levels(HTO.data$Multi_class) %in% c("Doublet","Negative"),levels(seuratObj$MULTI_ID),"Singlet")
+HTO.data$Multi_class <- factor(HTO.data$Multi_class,levels(HTO.data$Multi_class)[c(2,1,3)])
+
+
+max.barplot <-   ggplot(HTO.data,aes(x=maxHTO)) +
+  geom_bar(aes(y = (..count..)/sum(..count..)),fill = "#0073C2FF") + 
+  scale_y_continuous(labels=scales::percent) +
+  labs(y = "Percent", fill="class") +
+  theme_bw() +
+  theme(legend.position = "none", text = element_text(size=20)) +
+  ggtitle("Cell frequencies per maximum Hashtag")  
+max.barplot
+
+
+
+```
+
+
+## Visualization
+```{r}
+secmax_MultiLabel <- ggplot(HTO.data,aes(x = log2(maxval+1),y = log2(secval+1),color=Multi_label)) +
+  geom_point(size=0.75) +
+  geom_abline(slope = 1 ,color = "blue" ) +
+  geom_abline(slope = 0.80 ,color = "red" ) +
+  theme_bw() +
+  theme(text = element_text(size=15)) +
+  guides(colour = guide_legend(override.aes = list(size=3))) +
+  facet_wrap(~maxHTO) +
+  #scale_color_manual(values=c("firebrick", "coral","limegreen")) + #Doublet Negative Singlet
+  ggtitle("Log2 counts per maximum and second largest value HTO: Multiseq_Demux")
+
+secmax_MultiLabel
+```
+
+
+
+##NEEDED FOR HASHING COMPARISON
+```{r}
+# Vector needed
+MULTI_ID <- HTO.data$Multi_label
+# hash.ID ? NOT FOUND
+# HTO_classification.global? NOT found
+
+
+
+#png(filename = paste0(output.dir,"Plots/HTO/","08_umap_HTO_compare",".png"), width = 1500, height = 1000)
+
 ggarrange(#DimPlot(seuratObj, reduction = "HTO_umap", group.by = "freemuxlet_guess", pt.size = 1)+ggtitle("Freemuxlet:label"),
-  DimPlot(seuratObj, reduction = "HTO_umap", group.by = "hash.ID", pt.size = 1)+ggtitle("HTOdemux:label"),
+  
+  #DimPlot(seuratObj, reduction = "HTO_umap", group.by = "hash.ID", pt.size = 1)+ggtitle("HTOdemux:label"),
   DimPlot(seuratObj, reduction = "HTO_umap", group.by = "MULTI_ID", pt.size = 1)+ggtitle("Multiseq:label"),
+  
   #DimPlot(seuratObj, reduction = "HTO_umap", group.by = "freemuxlet_type", pt.size = 1)+ggtitle("Freemuxlet:type"),
-  DimPlot(seuratObj, reduction = "HTO_umap", group.by = "HTO_classification.global", pt.size = 1)+ggtitle("HTOdemux:type"),
+
+  #DimPlot(seuratObj, reduction = "HTO_umap", group.by = "HTO_classification.global", pt.size = 1)+ggtitle("HTOdemux:type"),
   ncol=3, nrow=2)
 dev.off()
-pdf(file =  paste0(output.dir,"Plots/HTO/","08_umap_HTO",".pdf"), width=10, height = 10)
+
+
+# PDF Version
+#pdf(file =  paste0(output.dir,"Plots/HTO/","08_umap_HTO",".pdf"), width=10, height = 10)
 # DimPlot(seuratObj, reduction = "HTO_umap", group.by = "freemuxlet_guess", pt.size = 1)+ggtitle("Freemuxlet:label")
-DimPlot(seuratObj, reduction = "HTO_umap", group.by = "hash.ID", pt.size = 1)+ggtitle("HTOdemux:label")
+#DimPlot(seuratObj, reduction = "HTO_umap", group.by = "hash.ID", pt.size = 1)+ggtitle("HTOdemux:label")
 DimPlot(seuratObj, reduction = "HTO_umap", group.by = "MULTI_ID", pt.size = 1)+ggtitle("Multiseq:label")
 # DimPlot(seuratObj, reduction = "HTO_umap", group.by = "freemuxlet_type", pt.size = 1)+ggtitle("Freemuxlet:type")
-DimPlot(seuratObj, reduction = "HTO_umap", group.by = "HTO_classification.global", pt.size = 1)+ggtitle("HTOdemux:type")
-dev.off()
+#DimPlot(seuratObj, reduction = "HTO_umap", group.by = "HTO_classification.global", pt.size = 1)+ggtitle("HTOdemux:type")
+#dev.off()
+
+```
 
 
 
-pdf(file = paste0(output.dir,"Plots/HTO/Overview_HTO.pdf"), width = 10, height = 10)
+```{r}
+# Vector Needed for graph
+PresentHashingAntibodies<-c("Hashtag1","Hashtag2",
+                            "Hashtag3", "Hashtag5","Hastag6")
+HTOCounts<-as.matrix((rowSums(as.matrix((seuratObj@assays$HTO@counts)))))
+TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
+
+
+#pdf(file = paste0(output.dir,"Plots/HTO/Overview_HTO.pdf"), width = 10, height = 10)
+
 # FeaturePlot(seuratObj, features="Hashtag1", pt.size=0.10,label.size = 8,order=T)
 # FeaturePlot(seuratObj, features="Hashtag2", pt.size=0.10,label.size = 8,order=T)
+
+# SAM05 geen Hastag6 in feature plot
 FeaturePlot(seuratObj, features=(TrueDetectedAbs),ncol=2, pt.size=0.1, label.size = 8,order=T)
-DimPlot(seuratObj,group.by = "hash.ID", label = F, pt.size = 0.1) + ggtitle("HTOdemux")
-DimPlot(seuratObj,split.by = "hash.ID", group.by = "hash.ID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("HTOdemux")
+
+
+#DimPlot(seuratObj,group.by = "hash.ID", label = F, pt.size = 0.1) + ggtitle("HTOdemux")
+#DimPlot(seuratObj,split.by = "hash.ID", group.by = "hash.ID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("HTOdemux")
+
 DimPlot(seuratObj,group.by = "MULTI_ID", label = F, pt.size = 0.1) + ggtitle("MULTIseqDemux")
 DimPlot(seuratObj,split.by = "MULTI_ID", group.by = "MULTI_ID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("MULTIseqDemux")
-DimPlot(seuratObj,group.by = "HTO_maxID", label = F, pt.size = 0.1) + ggtitle("MAX HTO count")
-DimPlot(seuratObj,split.by = "HTO_maxID", group.by = "HTO_maxID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("MAX HTO count")
-dev.off()
 
+#DimPlot(seuratObj,group.by = "HTO_maxID", label = F, pt.size = 0.1) + ggtitle("MAX HTO count")
+#DimPlot(seuratObj,split.by = "HTO_maxID", group.by = "HTO_maxID", label = F, pt.size = 0.1, ncol = 2) + #ggtitle("MAX HTO count")
+dev.off()
+```
 
 
 
 ### Fetch doublets from hashing ###
 # -> uses Hashing data to find Doublets and Negatives
-
+```{r}
 ## Create HTO.data
 # get hashtags present
 tags <- rownames(seuratObj@assays$HTO@data)
@@ -61,6 +245,7 @@ for (barcode in HTO.data$barcodes){
   max.tags <- append(max.tags, highest.HTO)
   #print(rownames(HTO.data[HTO.data[[barcode]] == max(HTO.data[[barcode]]),])) # for the maximum value
 }
+
 # merge with HTO.data
 HTO.data <- cbind(HTO.data,max.tags)
 # get value of the max hashtag
@@ -80,7 +265,10 @@ p <- ggplot(HTO.data, aes(x=max.tags, y=max.HTO.val, fill=max.tags)) +
   xlab("") + theme_classic()
 print(p)
 
-## Create Hashtag.info table
+```
+## Create Hashtag.info table | Causes Near Crashes DONT USE
+```{r}
+############## NOTE : HEB DEZE CODE AANGEPAST #########################""
 hashtag.info <- as_tibble(tags)
 colnames(hashtag.info) <- "tag"
 # Add quantile percentages for each hashtag
@@ -88,12 +276,13 @@ q.data <- tibble()
 for (tag in tags){
   # get quantile distribution (MANUAL threshold)
   q <- quantile(HTO.data[HTO.data$max.tags == tag,tag],probs = seq(0, 1, by=0.01), names = T)
-  
-  ##### AUTOMATIC expression cutoof detection #####
-  # Add automated way to find dip between two peaks in data this will make the quantile cut_off less manual
-  # based on assumtion: We will assume that a cell belongs to a # depending on what # it expresses the most
-  # Why? It allows us to determine the lower expression limit of a # and at what point we can say a cell is positive for a #
-  
+}
+
+q
+```
+
+# Experession cutoff
+```{r}
   # find expression level were to place cutoff for each hashtag
   # In the plots we should see 2 peaks and cut_off needs to be in the middle of those peaks
   # We also need to make sure we actually see those peaks! if not this method probably will not work
@@ -125,20 +314,25 @@ for (tag in tags){
   index <- which(d$y == MinYDensity)
   # min_expr <- d$x[index] #removed by clint!!
   min_expr<-q_manual_clint[tag]  #Clint
-  
+```
+
+
+```{r}
   ## Barplot
-  #barplot <- ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
-  #geom_histogram(position = "stack", bins = 75) +
-  #theme_classic(base_size = 20) + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  barplot <- ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
+  geom_histogram(position = "stack", bins = 75) +
+  theme_classic(base_size = 20) + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
   ## Densityplot
-  #densityplot <- ggplot(df, aes(x = .data[[tag]])) +
-  #geom_density()+
-  #geom_vline(linetype="dashed",xintercept = x_first_peak, color = "black") +
-  #geom_vline(linetype="dashed",xintercept = x_second_peak, color = "black") +
-  #geom_vline(linetype="dashed",xintercept = min_expr, color = "red") +
-  #theme_classic() + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
-  #print(ggarrange(barplot,densityplot))
-  
+  densityplot <- ggplot(df, aes(x = .data[[tag]])) +
+  geom_density()+
+  geom_vline(linetype="dashed",xintercept = x_first_peak, color = "black") +
+  geom_vline(linetype="dashed",xintercept = x_second_peak, color = "black") +
+  geom_vline(linetype="dashed",xintercept = min_expr, color = "red") +
+  theme_classic() + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  print(ggarrange(barplot,densityplot))
+```
+
+```{r}
   pdf(file =  paste0(output.dir,"Plots/HTO/","10_Cutoff_plots_clint_v2_",tag,".pdf"), width=10, height = 10)
   print(
     ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
@@ -149,8 +343,12 @@ for (tag in tags){
       geom_vline(linetype="solid",xintercept = min_expr, color = "red", size = 2) +
       scale_x_continuous(breaks=seq(0, 10, 0.5)) + #Clint
       theme_classic(base_size = 20) +  
-      ggtitle(paste0("Normalised ",tag, " Expression in all Cells")))
+      ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+    )
   dev.off()
+```
+  
+  
   
   # Add automaticly found value to quantile range
   q["auto"] <- min_expr
@@ -164,8 +362,9 @@ for (tag in tags){
 ## Added by Clint
 ## Sadly, too many peaks present in data for hashtag 7. Minimum between first two peaks is not a good cut-off!!
 ## Manually determined by the plots
-q_manual_clint<-c(1.2,1.0,0.95,1.2) #1,2,3,4,5,6
-names(q_manual_clint)<-tags
+tags <- rownames(seuratObj@assays$HTO@data)
+q_manual_clint<-c(1.2,1.0,0.95,1.2,1.0,1.0) #1,2,3,4,5,6
+names(q_manual_clint)<-tags[2:7]
 
 # merge with hashtag.info
 hashtag.info <- cbind(hashtag.info,q.data)
@@ -325,41 +524,3 @@ dev.off()
 #######################################################################################################
 
 
-## Hashing Testing and Notes
-```{r}
-#reading files 
-#pbmc.umis <- readRDS("/brahms/shared/vignette-data/pbmc_umi_mtx.rds")
-
-
-
-
-#Look for intersection between RNA and HTO 
-
-
-
-## Subset RNA and HTO counts by joint cell barcodes
-#pbmc.umis <- pbmc.umis[, joint.bcs]
-#pbmc.htos <- as.matrix(pbmc.htos[, joint.bcs])
-
-
-
-
-
-# VIB SCRIPT
-# Put HTO in seprate assay
-# seuratObj[['HTO']] <- CreateAssayObject(counts = rawData$`Custom`[,colnames(seuratObj)],min.cells=1)
-# names(seuratObj)
-
-### SPECIFY THE HASHTAG ANTIBODIES USED IN THE EXPERIMENT
-#PresentHashingAntibodies<-c("Hashtag7","Hashtag8",
-#                           "Hashtag9", "Hashtag10")
-
-#
-# HTOCounts<-as.matrix((rowSums(as.matrix((seuratObj@assays$HTO@counts)))))
-# TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
-
-# after decting the trye HTOcounts
-# Replaces the seuratobject HTO with only Truedectedabs
-
-# After which follows normal preprocessing steps
-```

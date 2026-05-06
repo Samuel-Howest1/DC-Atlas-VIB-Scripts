@@ -49,7 +49,7 @@ library("clustree") # Note:Be sure you have the 4.5 version of Rtools
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM06")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -332,7 +332,6 @@ seuratObj <- RunPCA(seuratObj,
 
 Elbow <- ElbowPlot(seuratObj, reduction = "RNA_pca")
 Elbow
-# Results SAM2: Use 14 Dimension
 ```
 
 ```{r}
@@ -395,6 +394,7 @@ for(i in LoopRes){
 Tree
 # Best Resolution for SAM2 =0.7
 # Best Resolution for SAM3 =0.6
+# Best Resolution for SAM3 =0.7
 
 ```
 
@@ -403,7 +403,7 @@ Tree
 ```{r}
 #Put the best Dims and Resolution here in this graph 
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
-  seuratObj <- FindClusters(seuratObj, resolution = 0.6)
+  seuratObj <- FindClusters(seuratObj, resolution = 0.7)
   seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   BestCluster <- DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
   BestCluster
