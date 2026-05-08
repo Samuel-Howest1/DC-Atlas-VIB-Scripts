@@ -49,7 +49,7 @@ library("clustree") # Note:Be sure you have the 4.5 version of Rtools
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM06")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -394,7 +394,10 @@ for(i in LoopRes){
 Tree
 # Best Resolution for SAM2 =0.7
 # Best Resolution for SAM3 =0.6
-# Best Resolution for SAM3 =0.7
+# Best Resolution for SAM05 =0.7
+# Best Resolution for SAM06 =0.7
+# Best Resolution for SAM16 =0.7
+# Best Resolution for JVE008 =0.7
 
 ```
 
