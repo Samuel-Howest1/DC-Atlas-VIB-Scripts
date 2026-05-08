@@ -56,7 +56,7 @@ rawDataHTO <- rawData[["Custom"]]
 Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
 
 rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
-
+# specifeer hashtag 1 2 3
 #Filter the Seuratobject To remove Hashtag without cells
 HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
 rawDataHTO <- rawDataHTO[HTO_Above_0, ]
@@ -395,6 +395,21 @@ for (tag in tags){
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
 ## Added by Clint
 ## Sadly, too many peaks present in data for hashtag 7. Minimum between first two peaks is not a good cut-off!!
 ## Manually determined by the plots
@@ -559,4 +574,4 @@ dev.off()
 
 #######################################################################################################
 
-
+```

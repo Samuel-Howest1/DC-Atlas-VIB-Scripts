@@ -36,20 +36,20 @@ library("HGNChelper") #For sc_type nesseacry
 library("scDblFinder")
 library("readxl")
 library("patchwork")
-#library("presto") Already part of seurat starting form V5 
+library("presto") 
 # issue downloading presto --> use following commands:
 #pak::pak("RcppArmadillo@0.12.8.0.0", ask = FALSE)
 #.rs.restartR()
 #pak::pak("immunogenomics/presto")
 library("clustree") # Note:Be sure you have the 4.5 version of Rtools
-
+library("openxlsx")
 ```
 
 ```{r}
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -415,10 +415,16 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 ##Finding Cluster Biomarkers
 
 ```{r}
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+
 
 ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
 ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
 head(ClusterRNA, n = 6)
+
+saveRDS(ClusterRNA, paste0("SeuratObj_Marker_RNA_",FileName))
+
+write.xlsx(ClusterRNA,paste0("SeuratObj_Marker_RNA_",FileName,".xlsx"))
 
 
 ```
@@ -466,6 +472,7 @@ TotalDimsADT <- EndingDimsADT - StartingDimsADT
 print(paste0("Working on Dims Starting form ",StartingDimsADT, " to Dims ", EndingDimsADT ," Total: ",TotalDimsADT))
 
 ListDimsADT <- seq(1:TotalDimsADT+1)
+
 for(i in ListDimsADT){
   #Creating Mulitple Cluster Maps with Different Dims
   StartingDimsADT <- StartingDimsADT + 1
@@ -480,6 +487,26 @@ for(i in ListDimsADT){
 }
 
 
+#LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
+
+# Fill in the BEST dims found form the pervious chunck(NOTE: 2 dims=1:? to fill in)!
+#for(i in LoopRes){
+  
+#Creating Mulitple Cluster Maps with Different Resolutions
+ # seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "ADT_pca")
+#  seuratObj <- FindClusters(seuratObj, resolution = i)
+#  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "ADT_pca", reduction.name = "ADT_umap" )
+  
+  #Title for UMap
+#  UMAPTitle <- paste0("Resolution Number ADT = ",i)
+#  UMAPgraph  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
+ # print(UMAPgraph)
+#}
+
+#Test Clustree
+ # TreeADT <- clustree(seuratObj, prefix = "ADT_snn_res.")
+#TreeADT
+
 #Best Cluster (Change dims)
 seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:14)
 seuratObj <- FindClusters(seuratObj, resolution = 0.5)
@@ -490,9 +517,15 @@ seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca
 DimPlot(seuratObj, reduction = "ADT_umap", label = T, repel = T, label.size = 4)
 
 #Finding Markers
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
 
 ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
 head(ClusterADT6, n = 6)
+
+saveRDS(ClusterADT6, paste0("SeuratObj_Marker_ADT_",FileName))
+
+write.xlsx(ClusterADT6,paste0("SeuratObj_Marker_ADT_",FileName,".xlsx"))
+
 
 FeaturePlot(seuratObj, features = c("CD24", "CD9", "CD371	", "CD272", "XCR1", "CD29"))
 
@@ -564,7 +597,7 @@ seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
 seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
 
 
- DoubletsMap <- FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+ DoubletsMap <- FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
 DoubletsMap
 
 
@@ -591,7 +624,7 @@ gc()
 ```{r}
 seuratObj[["percent.mt"]] <- PercentageFeatureSet(seuratObj, pattern = "^mt-")
 
-MitoMap <- FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+MitoMap <- FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
 MitoMap
 
 # Goei Cutoffs for Mito gene Precentage --> 10%?
@@ -601,7 +634,7 @@ MitoMap
 ##Cluster ADT count
 ```{r}
 
- ADTMap <- FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
+ ADTMap <- FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
 ADTMap
 
 # nCount total ADT per cell
@@ -625,26 +658,38 @@ ADTMap
 AnnotData <- read_xlsx(path = "/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx")
 AnnotData
 
-plot_list <- list()
+plot_list_FL <- list()
+plot_list_TR <- list()
 
 for (i in 1:nrow(AnnotData)){
-  
   ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
   #Have To split it up because FeaturePlot see list of genes as 1 name
-  
-  AnnotTitle <- AnnotData$cellName[row.names(AnnotData)==i]
+  AnnotTitle <- paste0(AnnotData$cellName[row.names(AnnotData)==i],"  False ORDER")
   
   # Featureplot best used for looking per gene
   print(AnnotTitle)
-  
   p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
-            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 1.5)
-  
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7,order = FALSE)
   p_combined <- p + plot_annotation(title = AnnotTitle)
   
-  plot_list[[i]] <- p_combined
+  plot_list_FL[[i]] <- p_combined
   
-  print(plot_list[[i]])
+  print(plot_list_FL[[i]])
+   
+}
+
+for (i in 1:nrow(AnnotData)){
+  ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
+  #Have To split it up because FeaturePlot see list of genes as 1 name
+  AnnotTitle <- paste0(AnnotData$cellName[row.names(AnnotData)==i],"  True Order")
+  
+  # Featureplot best used for looking per gene
+  print(AnnotTitle)
+  p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7,order = TRUE)
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  plot_list_TR[[i]] <- p_combined
+  print(plot_list_TR[[i]])
    
   }
 
@@ -668,6 +713,9 @@ ADT: No obvious problems
 
 ## Saving R object
 ```{r}
+#Set folder
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+
 # Save Object with everything Before Post-Processing
 saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
 # Saving Graphs
@@ -679,12 +727,14 @@ hist2
 vlplt1 + vlplt2
 Elbow
 Tree
+#TreeADT
 BestCluster
 AnnotClust
 DoubletsMap
 MitoMap
 ADTMap
-plot_list
+plot_list_FL
+plot_list_TR
 
 dev.off()
 # Save object with everything after Post- Processing
