@@ -12,7 +12,7 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
 FileName <- basename(getwd())
 
 # For SAM2 and SAM3

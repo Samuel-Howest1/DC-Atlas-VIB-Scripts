@@ -53,14 +53,14 @@ FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataHTO <- rawData[["Custom"]]
 
-Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
-
-rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
-# specifeer hashtag 1 2 3
+#Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
+#rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
 #Filter the Seuratobject To remove Hashtag without cells
-HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
-rawDataHTO <- rawDataHTO[HTO_Above_0, ]
+#HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
+#rawDataHTO <- rawDataHTO[HTO_Above_0, ]
 
+TargetHTO <- c("Hashtag1","Hashtag2","Hashtag3")
+rawDataHTO <- rawDataHTO[TargetHTO,]
 
 seuratObj[["HTO"]] <- CreateAssayObject(counts = rawDataHTO[,colnames(seuratObj)] ,min.cells = 1)
 
@@ -82,12 +82,15 @@ seuratObj <- NormalizeData(seuratObj, assay = "HTO", normalization.method = "CLR
 VariableFeatures(seuratObj, assay = "HTO") <- rownames(seuratObj[["HTO"]])
 
 seuratObj <- ScaleData(seuratObj, assay = "HTO" )
-seuratObj <- RunPCA(object = seuratObj, assay = "HTO", features = VariableFeatures(seuratObj, assay = "HTO"), npcs = nrow(seuratObj@assays$ADT), ndims.print = 1:5, nfeatures.print = 8, reduction.name = "HTO_pca",reduction.key = "htoPC_")
+
+seuratObj <- RunPCA(object = seuratObj, assay = "HTO", features = VariableFeatures(seuratObj, assay = "HTO"), npcs = nrow(seuratObj@assays$HTO), ndims.print = 1:5, nfeatures.print = 8, reduction.name = "HTO_pca",reduction.key = "htoPC_")
 
 Elbow <- ElbowPlot(seuratObj, reduction = "HTO_pca")
 Elbow
 
-seuratObj <- RunUMAP(seuratObj, dims = 1:10,assay = "HTO", reduction ="HTO_pca",
+n_dims <- ncol(Embeddings(seuratObj[["HTO_pca"]]))
+
+seuratObj <- RunUMAP(seuratObj, dims = 1:n_dims,assay = "HTO", reduction ="HTO_pca",
                        reduction.name = "HTO_umap", reduction.key = "HTOUMAP_")
 # ???? Wat moet ik hier uit halen
 DimPlot(seuratObj, reduction = "HTO_umap",label = T, repel = T, label.size = 4)
@@ -348,8 +351,8 @@ for (tag in tags){
   # min_expr <- d$x[index] #removed by clint!!
   
   tags <- rownames(seuratObj@assays$HTO@data)
-  q_manual_clint<-c(1.2,1.0,0.95,1.2,1.0,1.0) #1,2,3,4,5,6
-  names(q_manual_clint)<-tags[1:6]
+  q_manual_clint<-c(0.95,1.0,0.90)
+  names(q_manual_clint)<-tags[1:3]
   
   min_expr<-q_manual_clint[tag]  #Clint
 
@@ -357,15 +360,20 @@ for (tag in tags){
   ## Barplot
   barplot <- ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
   geom_histogram(position = "stack", bins = 75) +
+  geom_vline(linetype="dashed",xintercept = min_expr, color = "red")+
+    
+    xlim(0,3)+ # Add and remove when necessary
+    
   theme_classic(base_size = 20) + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  print(barplot)
   ## Densityplot
-  densityplot <- ggplot(df, aes(x = .data[[tag]])) +
-  geom_density()+
-  geom_vline(linetype="dashed",xintercept = x_first_peak, color = "black") +
-  geom_vline(linetype="dashed",xintercept = x_second_peak, color = "black") +
-  geom_vline(linetype="dashed",xintercept = min_expr, color = "red") +
-  theme_classic() + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
-  print(ggarrange(barplot,densityplot))
+  #densityplot <- ggplot(df, aes(x = .data[[tag]])) +
+  #geom_density()+
+  #geom_vline(linetype="dashed",xintercept = x_first_peak, color = "black") +
+  #geom_vline(linetype="dashed",xintercept = x_second_peak, color = "black") +
+  #geom_vline(linetype="dashed",xintercept = min_expr, color = "red") +
+  #theme_classic() + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  #print(ggarrange(barplot,densityplot))
 
   #  pdf(file =  paste0(output.dir,"Plots/HTO/","10_Cutoff_plots_clint_v2_",tag,".pdf"), width=10, height = 10)
   #print(
@@ -410,19 +418,12 @@ for (tag in tags){
 
 
 ```{r}
-## Added by Clint
-## Sadly, too many peaks present in data for hashtag 7. Minimum between first two peaks is not a good cut-off!!
-## Manually determined by the plots
-tags <- rownames(seuratObj@assays$HTO@data)
-q_manual_clint<-c(1.2,1.0,0.95,1.2,1.0,1.0) #1,2,3,4,5,6
-names(q_manual_clint)<-tags[2:7]
-
 # merge with hashtag.info
 hashtag.info <- cbind(hashtag.info,q.data)
 
 #View(hashtag.info)  
 ## get for each cell in HTO.data expression of lower x% of all the cells for each hashtag! if cell in lower x% foor all tags -> negative
-#q.cutoff <- "10%"
+q.cutoff <- "auto"
 # loop over all values in HTO.data
 for (c in 1:nrow(HTO.data)){
   for (tag in tags){
@@ -434,7 +435,7 @@ for (c in 1:nrow(HTO.data)){
     }
   }
 }
-# get colnames of negatives
+# get colnames of negatives ()
 negatives_cols <- c()
 for (tag in tags){
   negatives_cols <- append(negatives_cols,paste0(tag,"_neg"))
@@ -463,7 +464,10 @@ table(HTO.data$doublet)
 # add barcode names to metadata
 seuratObj@meta.data$barcodes <- rownames(seuratObj@meta.data)
 # Fetch doublet information from DoubletFinder and the barcodes
-data <- as_tibble(seuratObj@meta.data[,c("barcodes","DFPrediction")]) #Clint
+
+data <- as_tibble(seuratObj@meta.data[,c("barcodes","scDblFinder_class")]) #Clint
+
+#data <- data.frame( barcodes = rownames(seuratObj@meta.data), scDblFinder.class = seuratObj@meta.data$scDblFinder_class)
 # merge
 HTO.data <- merge(HTO.data,data)
 
@@ -478,9 +482,11 @@ table(HTO.data$HTO_Results)
 
 # doubletFinder
 HTO.data$DF_Results <- NA
-HTO.data[HTO.data$DFPrediction == "Singlet","DF_Results"] <- "Singlet" #clint
-HTO.data[HTO.data$DFPrediction == "Low Confidence" | HTO.data$DFPrediction == "Low Confidence adjusted","DF_Results"] <- "Doublet_low" #clint
-HTO.data[HTO.data$DFPrediction == "High Confidence" | HTO.data$DFPrediction == "High Confidence adjusted","DF_Results"] <- "Doublet_high" #clint
+HTO.data[HTO.data$scDblFinder.class == "singlet","DF_Results"] <- "Singlet" #clint
+
+HTO.data[HTO.data$scDblFinder.class == "doublet","DF_Results"] <- "Doublet" #clint
+
+#HTO.data[HTO.data$scDblFinder.class == "High Confidence" | HTO.data$scDblFinder.class == "High Confidence adjusted","DF_Results"] <- "Doublet_high" #clint
 table(HTO.data$DF_Results)
 
 
@@ -491,6 +497,7 @@ HTO.data$HTO_STRICT_GUESS <- HTO.data$max.tags
 HTO.data[HTO.data$negative == T,"HTO_STRICT_GUESS"] <- "Negative"
 # assign Doublets
 HTO.data[HTO.data$doublet == T,"HTO_STRICT_GUESS"] <- "Doublet"
+
 HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_STRICT_GUESS"] <- "Doublet"
 HTO.data[HTO.data$DF_Results == "Doublet_low","HTO_STRICT_GUESS"] <- "Doublet"
 table(HTO.data$HTO_STRICT_GUESS)

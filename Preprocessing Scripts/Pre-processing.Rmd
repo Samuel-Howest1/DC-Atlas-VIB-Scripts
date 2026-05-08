@@ -49,7 +49,7 @@ library("openxlsx")
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -418,13 +418,32 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
 
 
-ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
+ClusterRNA <- FindAllMarkers(seuratObjP, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
 ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
-head(ClusterRNA, n = 6)
 
+ClusterRNA$score<- ClusterRNA$pct.1/(ClusterRNA$pct.2+0.01)*ClusterRNA$avg_log2FC
+head(ClusterRNA)
+
+totalNrClusters<-max(as.numeric(names(table(ClusterRNA$cluster))))
+totalNrClusters <- totalNrClusters+1
+markersList<-list()
+
+for(i in 1:totalNrClusters){
+  clusterNr<-i-1
+  
+  tmp<-ClusterRNA[ClusterRNA$cluster==clusterNr,]
+  tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC
+  
+  markersList[[i]]<-tmp[order(tmp$score, decreasing=TRUE),]
+}
+totalNrClusters <- totalNrClusters-1
+names(markersList)<-paste0("cluster",0:totalNrClusters)
+
+### Write to Excel
+
+write.xlsx(markersList,paste0("SeuratObj_Marker_RNA_",FileName,".xlsx"))
+           
 saveRDS(ClusterRNA, paste0("SeuratObj_Marker_RNA_",FileName))
-
-write.xlsx(ClusterRNA,paste0("SeuratObj_Marker_RNA_",FileName,".xlsx"))
 
 
 ```
@@ -433,7 +452,7 @@ write.xlsx(ClusterRNA,paste0("SeuratObj_Marker_RNA_",FileName,".xlsx"))
 
 ```{r}
 
-FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", "Cdk1"))
+#FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", "Cdk1"))
 
 ```
 
