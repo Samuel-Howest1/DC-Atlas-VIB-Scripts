@@ -49,7 +49,7 @@ library("openxlsx")
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM016")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -418,7 +418,7 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
 
 
-ClusterRNA <- FindAllMarkers(seuratObjP, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
+ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
 ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
 
 ClusterRNA$score<- ClusterRNA$pct.1/(ClusterRNA$pct.2+0.01)*ClusterRNA$avg_log2FC
