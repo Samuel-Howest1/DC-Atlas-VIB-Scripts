@@ -29,25 +29,25 @@ seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post process
 ```{r}
 
 # Subset: Removing the Negative and Doublets
+# Only HTO.data doublets removed ---> scdblfinder doublets are still in the the seuratObj 
 ncol(seuratObj)
 seuratObjR <- subset(seuratObj,seuratObj@meta.data$HTO_GUESS != "Doublet" & seuratObj@meta.data$HTO_GUESS != "Negative")
 ncol(seuratObjR)
 
-#Subset: Only CDC 1
-ncol(seuratObjR)
-seuratObjCDC1 <- subset(seuratObjR, seuratObj@meta.data$sctype_classification == "Dendritic cells 1" | seuratObj@meta.data$sctype_classification == "Migratory dendritic cells 1")
-ncol(seuratObjCDC1)
+PlotSeurat <- DimPlot(seuratObj)
+PlotSeuratR <- DimPlot(seuratObjR)
 
-
-
+PlotSeurat
+PlotSeuratR 
 
 ```
+
+
 
 ## Manual Cluster slection Seurat Manier
 ```{r}
 
-selected <- CellSelector(DimPlot(seuratObj))
-#selected2 <- CellSelector(DimPlot(seuratObj), ident = 8) 
+selected <- CellSelector(DimPlot(seuratObjR))
 
 ```
 
@@ -95,22 +95,13 @@ colorSomeCells(ClusterData, UMAPTable, wantedCells)
 #Make number for new cluster
 totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
 NewNrClusters <- totalNrClusters + 1
-
-
 # Put orignal cluster assigments of cells
 seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
-
 seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
-
-
 # 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
-
 seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
-
 #Activate the new selected clusters
 Idents(seuratObj) <- seuratObj$seurat_selected_clusters
-
-
 DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 
@@ -120,45 +111,81 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```{r}
 # Remove Selected
-seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
+seuratObjR <- subset(seuratObjR, cells = selected, invert=TRUE)
+
 #Remove specific cluster (Change idents to choose which cluster to remove)
 # ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
 # seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
 
-DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
+DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```
 
-#Annontation Post-Processing
+
+#Annontation Post-Processing of seuratObjR
+```{r}
+ PostAnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')
+
+ PostAnnotClustR <- DimPlot(seuratObjR, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')
+ 
+ PostAnnotClust
+ PostAnnotClustR
+
+```
+
+
+# CDC1 Repeat the process for CDC1
+```{r}
+#Subset: Only CDC 1
+
+ncol(seuratObjR)
+# Previous mistake in annotation excel ---> need the whitspace for CDC1
+seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1")
+ncol(seuratObjCDC1)
+
+#active idents 
+Idents(seuratObjCDC1) <- "sctype_classification"
+
+PlotSeuratCDC1 <- DimPlot(seuratObjCDC1,)
+PlotSeuratCDC1
+
+```
+
+## Manual Cluster slection Seurat Manier
 ```{r}
 
-source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_wrapper.R"); 
-seuratObj <- run_sctype(seurat_object = seuratObj,
-                     assay = "RNA",
-                     scaled = TRUE,
-                     known_tissue_type="Immune system",
-                     custom_marker_file="/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx",
-                     name="sctype_classification")
+selected <- CellSelector(DimPlot(seuratObjCDC1))
 
-# MARKERS: General CDC
-# MARKERS: CDC1 and 2 , Migetory and Profilatrate
-
- PostAnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
- PostAnnotClust
-
+```
+##Remove CDC1 cells
+```{r}
+seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
 
 ```
 
+#Annontation Post-Processing of CDC1
+```{r}
 
+ PostAnnotClustCDC1 <- DimPlot(seuratObjCDC1, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')
+ PostAnnotClustCDC1
+
+```
+ 
+ 
 ```{r}
 #Saving Object
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
 
-saveRDS(seuratObj,paste0("SeuratObj_Post-Process_",FileName) )
+saveRDS(seuratObjR,paste0("SeuratObj_Post-Process_",FileName,".rds"))
+saveRDS(seuratObjR,paste0("SeuratObj_Post-Process_CDC1_",FileName,".rds"))
 
-pdf(paste0("Graphs Before and after Post-Process_",FileName))
-AnnotClust
+pdf(paste0("Graphs Before and after Post-Process_",FileName,".pdf"))
+PlotSeurat
+PlotSeuratR 
 PostAnnotClust
+PostAnnotClustR
+PlotSeuratCDC1
+PostAnnotClustCDC1
 dev.off()
 
 
