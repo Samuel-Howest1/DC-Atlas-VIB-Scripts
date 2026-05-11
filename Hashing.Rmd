@@ -423,6 +423,8 @@ hashtag.info <- cbind(hashtag.info,q.data)
 
 #View(hashtag.info)  
 ## get for each cell in HTO.data expression of lower x% of all the cells for each hashtag! if cell in lower x% foor all tags -> negative
+
+#Chech if and classifie if cell is consider negative
 q.cutoff <- "auto"
 # loop over all values in HTO.data
 for (c in 1:nrow(HTO.data)){
@@ -435,16 +437,19 @@ for (c in 1:nrow(HTO.data)){
     }
   }
 }
-# get colnames of negatives ()
+
+# get colnames of negatives () |Get the cel names of the negatives
 negatives_cols <- c()
 for (tag in tags){
   negatives_cols <- append(negatives_cols,paste0(tag,"_neg"))
 }
+
 # loop over all negative columns to get all negatives in lower left corner aka all cells who fall below the lower quantile for all hashtags
 HTO.data$negative <- apply(HTO.data[,negatives_cols], 1, all)
 table(HTO.data$negative)
 
-# check if a hashtag is above the minimum quantile for multiple hashtags -> these are doublets!
+# check if a hashtag is above the minimum quantile for multiple hashtags -> these are doublets! | chech if the cell has multiple hastags
+
 for (c in 1:nrow(HTO.data)){
   # fetch status for all hashtags
   status <- c()
@@ -465,9 +470,8 @@ table(HTO.data$doublet)
 seuratObj@meta.data$barcodes <- rownames(seuratObj@meta.data)
 # Fetch doublet information from DoubletFinder and the barcodes
 
-data <- as_tibble(seuratObj@meta.data[,c("barcodes","scDblFinder_class")]) #Clint
+data <- as_tibble(seuratObj@meta.data[,c("barcodes","scDblFinder_class")])
 
-#data <- data.frame( barcodes = rownames(seuratObj@meta.data), scDblFinder.class = seuratObj@meta.data$scDblFinder_class)
 # merge
 HTO.data <- merge(HTO.data,data)
 
@@ -482,59 +486,71 @@ table(HTO.data$HTO_Results)
 
 # doubletFinder
 HTO.data$DF_Results <- NA
-HTO.data[HTO.data$scDblFinder.class == "singlet","DF_Results"] <- "Singlet" #clint
-
-HTO.data[HTO.data$scDblFinder.class == "doublet","DF_Results"] <- "Doublet" #clint
+HTO.data[HTO.data$scDblFinder_class == "singlet","DF_Results"] <- "Singlet"
+HTO.data[HTO.data$scDblFinder_class == "doublet","DF_Results"] <- "Doublet"
 
 #HTO.data[HTO.data$scDblFinder.class == "High Confidence" | HTO.data$scDblFinder.class == "High Confidence adjusted","DF_Results"] <- "Doublet_high" #clint
 table(HTO.data$DF_Results)
 
 
 ### ASSIGN DOUBLETS (HTO + DoubletFinder) HTO_STRICT_GUESS ###
-# Hashtags first
-HTO.data$HTO_STRICT_GUESS <- HTO.data$max.tags
-# assign negatives
-HTO.data[HTO.data$negative == T,"HTO_STRICT_GUESS"] <- "Negative"
-# assign Doublets
-HTO.data[HTO.data$doublet == T,"HTO_STRICT_GUESS"] <- "Doublet"
 
-HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_STRICT_GUESS"] <- "Doublet"
-HTO.data[HTO.data$DF_Results == "Doublet_low","HTO_STRICT_GUESS"] <- "Doublet"
-table(HTO.data$HTO_STRICT_GUESS)
+#################################################################################################################
+# Because scdblfinder doesn't assign cells with high or low confidence there is no difference between strict and lenient guesses. We look at HTO.data$doublet for determining Doublets. 
 
-### ASSIGN DOUBLETS (HTO + DoubletFinder) HTO_LENIENT_GUESS ###
+#HTO.data$doublet contains only the HTO.data doublets. Change this to DF_Results to also remove the scdblfinder found cells if neccessery
+#################################################################################################################
+
 # Hashtags first
-HTO.data$HTO_LENIENT_GUESS <- HTO.data$max.tags
+#HTO.data$HTO_STRICT_GUESS <- HTO.data$max.tags
 # assign negatives
-HTO.data[HTO.data$negative == T,"HTO_LENIENT_GUESS"] <- "Negative"
+#HTO.data[HTO.data$negative == T,"HTO_STRICT_GUESS"] <- "Negative"
 # assign Doublets
-HTO.data[HTO.data$doublet == T,"HTO_LENIENT_GUESS"] <- "Doublet"
-HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_LENIENT_GUESS"] <- "Doublet"
-#HTO.data[HTO.data$doublet.class == "Doublet_low","HTO_LENIENT_GUESS"] <- "Doublet"
-table(HTO.data$HTO_LENIENT_GUESS)
+#HTO.data[HTO.data$doublet == T,"HTO_STRICT_GUESS"] <- "Doublet"
+# Because scdblfinder doesn't assign cells with high or low confidence 
+#HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_STRICT_GUESS"] <- "Doublet"
+#HTO.data[HTO.data$DF_Results == "Doublet_low","HTO_STRICT_GUESS"] <- "Doublet"
+#table(HTO.data$HTO_STRICT_GUESS)
+
+### ASSIGN DOUBLETS (HTO + DoubletFinder) HTO_GUESS ###
+# Hashtags first
+HTO.data$HTO_GUESS <- HTO.data$max.tags
+# assign negatives
+HTO.data[HTO.data$negative == T,"HTO_GUESS"] <- "Negative"
+# assign Doublets
+HTO.data[HTO.data$doublet == T,"HTO_GUESS"] <- "Doublet"
+
+#HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_GUESS"] <- "Doublet"
+#HTO.data[HTO.data$doublet.class == "Doublet_low","HTO_GUESS"] <- "Doublet"
+
+table(HTO.data$HTO_GUESS)
 
 #HTO.data$DF_Results <- factor(HTO.data$DF_Results)
 ############################
 
 ## ADD TO SEURATOBJ
-# fix stupid error
+# fix stupid error | removing colums out of seurat metadata
 seuratObj@meta.data$HTOClass <- NULL # BUG FIX
 seuratObj@meta.data$HTO_Results <- NULL 
 seuratObj@meta.data$DF_Results <- NULL 
-# seuratObj@meta.data$FM_Results <- NULL 
 seuratObj@meta.data$HTO_STRICT_GUESS <- NULL 
-seuratObj@meta.data$HTO_LENIENT_GUESS <- NULL 
+seuratObj@meta.data$HTO_GUESS <- NULL
+
 # add to seurat metadata 
 metadata <- seuratObj@meta.data
-HTOClass <- HTO.data[,c("barcodes","HTO_Results","DF_Results","HTO_STRICT_GUESS","HTO_LENIENT_GUESS")]#"FM_Results",
+#Removed "HTO_STRICT_GUESS" # Samuel
+HTOClass <- HTO.data[,c("barcodes","HTO_Results","DF_Results","HTO_GUESS")]#"FM_Results",
 metadata <- merge(metadata,HTOClass,by.x = "barcodes",by.y = "barcodes")
 
 ## Make correct order in metadata!!
 rownames(metadata)<-metadata$barcodes
 all(rownames(metadata)==rownames(seuratObj@meta.data))
 metadata<-metadata[seuratObj@meta.data$barcodes,]
+
+# This HAS TO BE TRUE !
 all(rownames(metadata)==rownames(seuratObj@meta.data))
 
+# Turning results into factors
 seuratObj <- AddMetaData(seuratObj,metadata$HTO_Results,col.name = "HTO_Results")
 seuratObj@meta.data$HTO_Results <- factor(seuratObj@meta.data$HTO_Results)
 
@@ -544,14 +560,21 @@ seuratObj@meta.data$DF_Results <- factor(seuratObj@meta.data$DF_Results)
 # seuratObj <- AddMetaData(seuratObj,metadata$FM_Results,col.name = "FM_Results")
 # seuratObj@meta.data$FM_Results <- factor(seuratObj@meta.data$FM_Results)
 
-seuratObj <- AddMetaData(seuratObj,metadata$HTO_STRICT_GUESS,col.name = "HTO_STRICT_GUESS")
-seuratObj@meta.data$HTO_STRICT_GUESS <- factor(seuratObj@meta.data$HTO_STRICT_GUESS)
+#Removed
+#seuratObj <- AddMetaData(seuratObj,metadata$HTO_STRICT_GUESS,col.name = "HTO_STRICT_GUESS")
+#seuratObj@meta.data$HTO_STRICT_GUESS <- factor(seuratObj@meta.data$HTO_STRICT_GUESS)
 
-seuratObj <- AddMetaData(seuratObj,metadata$HTO_LENIENT_GUESS,col.name = "HTO_LENIENT_GUESS")
-seuratObj@meta.data$HTO_LENIENT_GUESS <- factor(seuratObj@meta.data$HTO_LENIENT_GUESS)
+seuratObj <- AddMetaData(seuratObj,metadata$HTO_GUESS,col.name = "HTO_GUESS")
+seuratObj@meta.data$HTO_GUESS <- factor(seuratObj@meta.data$HTO_GUESS)
+
+
+# Numbers for graphs
+counts <- as.matrix(GetAssayData(object = seuratObj, assay = "HTO", layer = "counts")[,colnames(x = seuratObj)])
+ncells <- dim(counts)[2]
+
 
 ## Vis extra
-LENIENT_GUESS<-seuratObj@meta.data$HTO_LENIENT_GUESS
+LENIENT_GUESS<-seuratObj@meta.data$HTO_GUESS
 LENIENT_GUESS_df <- as.data.frame(LENIENT_GUESS) %>%
   group_by(LENIENT_GUESS) %>%  dplyr::count() %>% dplyr::mutate(perc = round(100*n/ncells,2))
 LENIENT_GUESS_results <- ggplot(LENIENT_GUESS_df, aes(x = LENIENT_GUESS, y = perc)) +
@@ -563,22 +586,47 @@ LENIENT_GUESS_results <- ggplot(LENIENT_GUESS_df, aes(x = LENIENT_GUESS, y = per
   ylim(0, 125) +
   theme(axis.text.x = element_text(angle = 45, size=12, hjust = 1))
 
-pdf(file = paste0(output.dir,"Plots/HTO/10_HTO_Lenient_guess_pipeline_Maarten_",experiment,".pdf"), width = 6, height = 5)
+LENIENT_GUESS_results
+
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+pdf(file = paste0("Graph Classification_",FileName,".pdf"), width = 6, height = 5)
 LENIENT_GUESS_results
 dev.off()
 
+# ?????????????????????????????????????????????????????????????????????????
 seuratObj$MULTI_ID_merge<-paste0(seuratObj$orig.ident,"_",seuratObj$MULTI_ID)
-seuratObj$LENIENT_GUESS_merge<-paste0(seuratObj$orig.ident,"_",seuratObj$HTO_LENIENT_GUESS)
+seuratObj$LENIENT_GUESS_merge<-paste0(seuratObj$orig.ident,"_",seuratObj$HTO_GUESS)
 
-pdf(file = paste0(output.dir,"Plots/HTO/Overview_",experiment,".pdf"), width = 10, height = 12)
+pdf(file = paste0("Overview_Plots_",FileName,".pdf"), width = 10, height = 12)
 DimPlot(seuratObj,group.by = "MULTI_ID_merge", label = F, pt.size = 0.1) + ggtitle("MULTIseqDemux")
-DimPlot(seuratObj,split.by = "MULTI_ID_merge", group.by = "MULTI_ID_merge", label = F, pt.size = 0.1, ncol = 4) + ggtitle("MULTIseqDemux")
+DimPlot(seuratObj,split.by = "MULTI_ID_merge", group.by = "MULTI_ID_merge", label = F, pt.size = 0.1, ncol = 1) + ggtitle("MULTIseqDemux")
 DimPlot(seuratObj,group.by = "LENIENT_GUESS_merge", label = F, pt.size = 0.1) + ggtitle("LENIENT_GUESS")
-DimPlot(seuratObj,split.by = "LENIENT_GUESS_merge", group.by = "LENIENT_GUESS_merge", label = F, pt.size = 0.1, ncol = 4) + ggtitle("LENIENT_GUESS")
-# DimPlot(seuratObj,group.by = "HTO_maxID", label = F, pt.size = 0.1) + ggtitle("MAX HTO count")
-# DimPlot(seuratObj,split.by = "HTO_maxID", group.by = "HTO_maxID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("MAX HTO count")
+DimPlot(seuratObj,split.by = "LENIENT_GUESS_merge", group.by = "LENIENT_GUESS_merge", label = F, pt.size = 0.1, ncol = 1) + ggtitle("LENIENT_GUESS")
+
 dev.off()
 
 #######################################################################################################
 
 ```
+
+## Saving Results
+
+```{r}
+## Save results
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+saveRDS(HTO.data, paste0("HTO_data_prediction_",FileName,"_HTO.rds"))
+saveRDS(seuratObj, paste0("SeuratObj_HTO_",FileName,".rds"))
+
+#Removing Negative and Doublets Now or in other scripts?
+
+#Compare
+count = 0
+for (i in 1:nrow(seuratObj@meta.data)){
+  if(as.character(seuratObj@meta.data[i,"MULTI_ID"]) == as.character(seuratObj@meta.data[i,"HTO_GUESS"])){
+    count = count + 1
+  }
+}
+count
+
+```
+

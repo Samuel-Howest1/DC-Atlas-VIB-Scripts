@@ -4,7 +4,8 @@ output:
   pdf_document: default
   html_document: default
 ---
-```r
+
+``` r
 knitr::opts_chunk$set(
   echo = FALSE,
   message = FALSE,
@@ -49,7 +50,7 @@ library("openxlsx")
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM016")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -230,6 +231,7 @@ vlplt1 + vlplt2
 ```
 
 ## Mitochondrial gene Percentage plot
+
 ```{r}
 Mito1 <- ggplot(metaData, aes(x=MitoPrecentage)) + 
   geom_histogram(binwidth = 0.1)+
@@ -252,8 +254,8 @@ Mito1 + coord_cartesian(xlim = c(0,10))
 
 ```
 
-
 ##How many cells were removed during filtering?
+
 ```{r}
 BeforeFiltering <- ncol(sce)
 AfterFilering <- ncol(scef)
@@ -268,7 +270,6 @@ print(paste("After Filtering",AfterFilering))
 
 
 ```
-
 
 ##Creating Seurat Object
 
@@ -369,6 +370,7 @@ for(i in ListDims){
 
 
 ```
+
 ## Loop For best Resolution of the found dims
 
 ```{r}
@@ -401,8 +403,8 @@ Tree
 
 ```
 
-
 # Best Clustering of cells
+
 ```{r}
 #Put the best Dims and Resolution here in this graph 
 seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
@@ -455,7 +457,6 @@ saveRDS(ClusterRNA, paste0("SeuratObj_Marker_RNA_",FileName))
 #FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", "Cdk1"))
 
 ```
-
 
 #ADT
 
@@ -550,8 +551,6 @@ FeaturePlot(seuratObj, features = c("CD24", "CD9", "CD371	", "CD272", "XCR1", "C
 
 ```
 
-
-
 #Annotation Cells
 
 ```{r}
@@ -563,6 +562,7 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
                      assay = "RNA",
                      scaled = TRUE,
                      known_tissue_type="Immune system",
+                     # Used Custom Annotation
                      custom_marker_file="/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx",
                      name="sctype_classification")
 
@@ -573,8 +573,8 @@ seuratObj <- run_sctype(seurat_object = seuratObj,
  AnnotClust
 ```
 
-
 # After Clustering Filitering (see notes and scripts (general))
+
 ```{r}
 # Top Markers per Cluster
 totalNrClusters<-max(as.numeric(names(table(ClusterRNA$cluster))))
@@ -598,6 +598,7 @@ for(i in 1:totalNrClusters){
 ```
 
 ## Finding Doublets
+
 ```{r}
 # Make Seuratobject a SingleCellExpirment Object
 Doublets <- as.SingleCellExperiment(seuratObj)
@@ -638,8 +639,8 @@ gc()
 
 ```
 
-
 ## Control if Mitochondrian gene Precentage for each gene
+
 ```{r}
 seuratObj[["percent.mt"]] <- PercentageFeatureSet(seuratObj, pattern = "^mt-")
 
@@ -651,6 +652,7 @@ MitoMap
 ```
 
 ##Cluster ADT count
+
 ```{r}
 
  ADTMap <- FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
@@ -669,7 +671,6 @@ ADTMap
 # Good Cutoffs also 10%?
 # Ploten on RNA_UMAP and ADT_UMAP
 ```
-
 
 # Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
 
@@ -717,20 +718,14 @@ ExcelMarker
 
 ```
 
-
 # Markdown note for Datasets
 
 SAM2:
 
-Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically.
-Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley  of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type 
-Mito: No obvious problems
-ADT: No obvious problems
-
-
-
+Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically. Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type Mito: No obvious problems ADT: No obvious problems
 
 ## Saving R object
+
 ```{r}
 #Set folder
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
@@ -760,6 +755,3 @@ dev.off()
 # Save Object with only (Mig and resident) CDC 1
 
 ```
-
-
-
