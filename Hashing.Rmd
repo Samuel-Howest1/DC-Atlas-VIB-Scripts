@@ -45,7 +45,7 @@ library('RColorBrewer')
 setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
 FileName <- basename(getwd())
 
-seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/SeuratObj_Pre-Process_",FileName))
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_Pre-Process_",FileName))
 
 # Load HTO Matrix and add to the seuratobject
 setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
@@ -588,7 +588,7 @@ LENIENT_GUESS_results <- ggplot(LENIENT_GUESS_df, aes(x = LENIENT_GUESS, y = per
 
 LENIENT_GUESS_results
 
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Hashing/",FileName))
 pdf(file = paste0("Graph Classification_",FileName,".pdf"), width = 6, height = 5)
 LENIENT_GUESS_results
 dev.off()
@@ -613,7 +613,7 @@ dev.off()
 
 ```{r}
 ## Save results
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Hashing/",FileName))
 saveRDS(HTO.data, paste0("HTO_data_prediction_",FileName,"_HTO.rds"))
 saveRDS(seuratObj, paste0("SeuratObj_HTO_",FileName,".rds"))
 

@@ -417,7 +417,7 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
 ##Finding Cluster Biomarkers
 
 ```{r}
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 
 ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
@@ -537,7 +537,7 @@ seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca
 DimPlot(seuratObj, reduction = "ADT_umap", label = T, repel = T, label.size = 4)
 
 #Finding Markers
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
 head(ClusterADT6, n = 6)
@@ -728,7 +728,7 @@ Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the a
 
 ```{r}
 #Set folder
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 # Save Object with everything Before Post-Processing
 saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
