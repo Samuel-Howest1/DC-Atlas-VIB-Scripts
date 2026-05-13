@@ -733,7 +733,8 @@ setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre
 # Save Object with everything Before Post-Processing
 saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
 # Saving Graphs
-pdf(paste0("Graphs_Pre-Process_",FileName))
+pdf(paste0("Graphs_Pre-Process_",FileName), width = 14,
+  height = 10)
 sctplt1 
 sctplt2
 hist1 

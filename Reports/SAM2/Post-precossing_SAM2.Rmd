@@ -2,55 +2,7 @@
 title: "Post-precossing"
 output: html_document
 ---
-##Functions
-```{r}
-colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
-  clusterMatrix$toColor=FALSE
-  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
-  
-  p1 <- ggplot()+
-    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
-    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
-    theme_classic() +
-    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
-  
-  return(p1)
-}
 
-```
-
-
-
-```{r}
-## Packages
-library("tidyverse")
-library("Seurat")
-library("SingleCellExperiment")
-library("scater")
-library("data.table")
-library("ggpubr")
-library("gridExtra")
-library("fitdistrplus") 
-library("dplyr")
-library("plyr")
-library("caret")
-library("openxlsx")
-library("ggplot2")
-library("tibble")
-library("scran")
-library("limma")
-library("ggrepel")
-library("intrinsicDimension")
-library("tidyr")
-library("purrr")
-library("ggrepel")
-library("clustree")
-library("limma")
-library("patchwork")
-library("future")
-library('RColorBrewer')
-
-```
 
 
 #Post-Processing
@@ -60,15 +12,14 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM06")
 FileName <- basename(getwd())
 
 # For SAM2 and SAM3
-seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
+#seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
 
 # For the rest of the datasets
-#seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_HTO_",FileName,".rds"))
-
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_HTO_",FileName,".rds"))
 
 
 ```
@@ -83,8 +34,8 @@ ncol(seuratObj)
 seuratObjR <- subset(seuratObj,seuratObj@meta.data$HTO_GUESS != "Doublet" & seuratObj@meta.data$HTO_GUESS != "Negative")
 ncol(seuratObjR)
 
-PlotSeurat <- DimPlot(seuratObj, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
-PlotSeuratR <- DimPlot(seuratObjR, label=T, repel=T)+ggtitle(paste0("Graph",FileName,""))
+PlotSeurat <- DimPlot(seuratObj)+ggtitle(paste0("Graph ",FileName," Clusters"))
+PlotSeuratR <- DimPlot(seuratObjR)+ggtitle(paste0("Graph",FileName,""))
 
 PlotSeurat
 PlotSeuratR 
@@ -93,7 +44,7 @@ PlotSeuratR
 
 
 
-## Manual Cluster selection of part of a cluster
+## Manual Cluster slection Seurat Manier
 ```{r}
 
 selected <- CellSelector(DimPlot(seuratObjR))
@@ -108,7 +59,26 @@ PrecentageDoublet
 
 
 
-## Manual Cluster selection of Whole cluster
+## Manual Cluster selection (Selection of Whole Cluster) (Is dit nog Nodig?)
+
+Functions
+```{r}
+colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
+  clusterMatrix$toColor=FALSE
+  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
+  
+  p1 <- ggplot()+
+    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
+    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
+  
+  return(p1)
+}
+
+
+
+```
 
 Selection
 ```{r}
@@ -116,42 +86,13 @@ ClusterData <- seuratObj@meta.data
 UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
 
 #Color Cluster Number?
-ColorIdent <- 16
+ColorIdent <- 1
 
 wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
+colorSomeCells(ClusterData, UMAPTable, wantedCells)
 
-PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = wantedCells))/length(WhichCells(seuratObjR,wantedCells)))*100
-
-PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
-PrecentageDoublet
-
-
-ClustRemoveMap3 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
-
-ClustRemoveMap1
-ClustRemoveMap2
-ClustRemoveMap3
 ```
 
-## Checking Unknow/ Suspicious cells
-```{r}
-# isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjR, idents = c(13,14,21)) #expression = sctype_classification == "Unknown")
-# Making a plot showcasing these genes
-PlotUnknown <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
-
-# Change title to what you'r looking at
-PlotUnknown8 <- PlotUnknown +plot_annotation(title = "Migratory dendritic cells 2 (13,14,21),Closer Look: Check for Migratory dendritic cells 1")
-
-PlotUnknown1
-PlotUnknown2
-PlotUnknown3
-PlotUnknown4
-PlotUnknown5
-PlotUnknown6
-PlotUnknown7
-PlotUnknown8
-```
 
 
 ## Adding A cluster
@@ -178,16 +119,12 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 seuratObjR <- subset(seuratObjR, cells = selected, invert=TRUE)
 
 #Remove specific cluster (Change idents to choose which cluster to remove)
- ClusterCellsRemove <- WhichCells(seuratObjR, idents = 24)
- seuratObjR <- subset(seuratObjR, cells = ClusterCellsRemove, invert=TRUE)
+# ClusterCellsRemove <- WhichCells(seuratObj, idents = 3)
+# seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
 
 DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```
-
-
-
-
 
 
 #Annontation Post-Processing of seuratObjR
@@ -208,7 +145,7 @@ DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4
 
 ncol(seuratObjR)
 # Previous mistake in annotation excel ---> need the whitspace for CDC1
-seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1" | seuratObjR$sctype_classification == "Proliferating DCs" | Idents(seuratObjR)==c(13,14))
+seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1") #| seuratObjR$sctype_classification == "Unknown")
 ncol(seuratObjCDC1)
 
 #active idents 
@@ -235,7 +172,7 @@ seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
 ```{r}
 
 # isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Unknown")
  
 # Making a plot showcasing these genes
 PlotUnknown <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
@@ -249,7 +186,7 @@ PlotUnknown
 ## Reasgin cells
 ```{r}
 
-seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells 1"
+seuratObjCDC1$sctype_classification[unknown_cells] <- " Dendritic cells 1"
 
 ```
 
@@ -261,33 +198,7 @@ seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells
 
 ```
  
-## Notes
-```{r}
-
-blurb = paste("\n   Notes for The Post-Processing of SAM2.\n",
-         "
-  Cluster with that appear  to have a high doublet count:
-		- CLUSTER 24: 96% Doublets---> Removed
-
-		- CLUSTER 17: 95% Doublets ---> Removed
-
-		- CLUSTER 16: 18% Doublets ---> Kept
-
-		CDC2 that just finished proliferating and are far form the CDC2 cluster
-
-		- Check celltype of cluster 16 and 25 nearby proliferating DCs
-		Cells are proliferating to celltypes other than CDC1 and thus left out
-		
-		- Check Migratory CDC2 Cluster 13,14,21
-			- Cluster 13: CDC1
-			- Cluster 14,21: CDC2")
-Notes <- ggplot() + 
-  annotate("text", x = 4, y = 25, size=4, label = blurb) + 
-  theme_void()
-Notes
-
-```
-
+ 
 ```{r}
 #Saving Object
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Post-process/"))
@@ -303,20 +214,9 @@ PlotSeurat
 #PlotSeuratR 
 PostAnnotClust 
 PostAnnotClustR
-ClustRemoveMap1
-ClustRemoveMap2
-PlotUnknown1
-PlotUnknown2
-PlotUnknown3
-PlotUnknown4
-PlotUnknown5
-PlotUnknown6
-PlotUnknown7
-PlotUnknown8
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PlotSeuratCDC1
 PostAnnotClustCDC1
-Notes
 dev.off()
 
 
