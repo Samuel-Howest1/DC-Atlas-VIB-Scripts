@@ -1,0 +1,297 @@
+---
+title: "Post-precossing"
+output: html_document
+---
+##Functions
+```{r}
+colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
+  clusterMatrix$toColor=FALSE
+  clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
+  
+  p1 <- ggplot()+
+    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
+    scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
+  
+  return(p1)
+}
+
+```
+
+
+
+```{r}
+## Packages
+library("tidyverse")
+library("Seurat")
+library("SingleCellExperiment")
+library("scater")
+library("data.table")
+library("ggpubr")
+library("gridExtra")
+library("fitdistrplus") 
+library("dplyr")
+library("plyr")
+library("caret")
+library("openxlsx")
+library("ggplot2")
+library("tibble")
+library("scran")
+library("limma")
+library("ggrepel")
+library("intrinsicDimension")
+library("tidyr")
+library("purrr")
+library("ggrepel")
+library("clustree")
+library("limma")
+library("patchwork")
+library("future")
+library('RColorBrewer')
+
+```
+
+
+#Post-Processing
+
+After Basic filtering of data we want to take a closer look at each cluster that and see where further processing is necessary 
+
+
+## Loading the Seurat Object
+```{r}
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
+FileName <- basename(getwd())
+
+# Loading in Seurat object
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
+
+
+```
+
+
+##Starting plot
+```{r}
+PlotSeurat <- DimPlot(seuratObj, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
+PlotSeurat
+
+```
+
+
+
+## Manual Cluster selection of part of a cluster
+```{r}
+
+selected <- CellSelector(DimPlot(seuratObj))
+
+PrecentageDoublet <- (length(WhichCells(seuratObj, expression = scDblFinder_class=="doublet", cells = selected))/length(WhichCells(seuratObj, selected)))*100
+PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
+
+PrecentageDoublet
+# Part of Cluster 11 = "92.31%" Doublets
+
+```
+
+
+
+
+## Manual Cluster selection of Whole cluster
+
+Selection
+```{r}
+ClusterData <- seuratObj@meta.data
+UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
+
+#CLuster Number checked: 9,17,11
+ColorIdent <- 11
+
+wantedCells<-WhichCells(seuratObj, idents = ColorIdent)
+
+PrecentageDoublet <- (length(WhichCells(seuratObj, expression = scDblFinder_class=="doublet", cells = wantedCells))/length(WhichCells(seuratObj,wantedCells)))*100
+
+PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
+PrecentageDoublet
+
+# Change map number for each checked cluster to keep maps separate
+ClustRemoveMap3 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
+
+
+ClustRemoveMap1
+ClustRemoveMap2
+ClustRemoveMap3
+```
+
+
+## Removing Selecetd cluster or cluster of choice
+
+```{r}
+# Remove Selected # part of Cluster 11 removed
+seuratObj <- subset(seuratObj, cells = selected, invert=TRUE)
+
+#Remove specific cluster (Removed cluster 9 and 17)
+ ClusterCellsRemove <- WhichCells(seuratObj, idents = c(9,17))
+ seuratObj <- subset(seuratObj, cells = ClusterCellsRemove, invert=TRUE)
+
+DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
+
+```
+
+
+
+#Annontation Post-Processing of seuratObj
+```{r}
+ PostAnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')+ggtitle(paste0("Graph: ",FileName," Annotation All cells Before"))
+
+ PostAnnotClust
+
+```
+
+
+# CDC1: Repeat the process for CDC1
+```{r}
+#Subset: Only CDC 1
+
+ncol(seuratObj)
+# Previous mistake in annotation excel ---> need the whitspace for CDC1
+seuratObjCDC1 <- subset(seuratObj, seuratObj$sctype_classification == " Dendritic cells 1"| seuratObj$sctype_classification == "Migratory dendritic cells 2" | seuratObj$sctype_classification == "Proliferating DCs" |seuratObj$sctype_classification == "RBC" | seuratObj$sctype_classification == "Unknown")
+ncol(seuratObjCDC1)
+
+#active idents 
+Idents(seuratObjCDC1) <- "sctype_classification"
+
+PlotSeuratCDC1 <- DimPlot(seuratObjCDC1,)+ggtitle(paste0("Graph: ",FileName," Annotation CDC1s Before"))
+PlotSeuratCDC1
+
+```
+
+## Checking Unknow cells
+```{r}
+
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Unknown")
+# Making a plot showcasing these genes
+PlotUnknown <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
+PlotUnknown1 <- PlotUnknown +plot_annotation(title = "Zooming on Unknown cluster: CDC1 Biomarkers")
+PlotUnknown1 # ----> = CDC1
+
+# Check RBC
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "RBC")
+# Making a plot showcasing these genes
+PlotUnknown2 <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
+PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Zooming on RBC cluster: CDC1 Biomarkers")
+PlotUnknown2 # -----> = CDC1
+
+# Check Migratory CDC2 FOR Migratory CDC1
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
+# Making a plot showcasing these genes
+PlotUnknown3 <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
+PlotUnknown3 <- PlotUnknown3 +plot_annotation(title = "Zooming on Migratory  CDC 2 cluster: Migratory CDC1 Biomarkers")
+PlotUnknown3 # -----> = CDC1
+
+# Check Migratory CDC2 FOR Migratory CDC2
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
+# Making a plot showcasing these genes
+PlotUnknown4 <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("S100a4","Anxa3","Cdc42ep3","Ccr7"))
+PlotUnknown4 <- PlotUnknown4 +plot_annotation(title = "Zooming in on Migratory  CDC 2 cluster: Migratory CDC2 Biomarkers")
+PlotUnknown4 # -----> = CDC1
+
+# Check Proliferating DCs FOR that they are all Proliferating DCs
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Proliferating DCs")
+# Making a plot showcasing these genes
+PlotUnknown5 <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Mki67","Stmn1"))
+PlotUnknown5 <- PlotUnknown5 +plot_annotation(title = "Zooming in on Migratory  CDC 2 cluster: Migratory CDC2 Biomarkers")
+PlotUnknown5 # -----> = CDC1
+
+```
+
+
+## Manual Cluster slection Seurat Manier
+```{r}
+# Removing Second RBC cluster
+# Removing part of the Migatory dendritic cells 2, To keep only the identified Migratory dendritic cells 1
+# Rmoving far off cells
+selected <- CellSelector(DimPlot(seuratObjCDC1))
+
+```
+##Remove CDC1 cells
+```{r}
+seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
+
+```
+
+
+## Reasgin cells
+```{r}
+
+changecells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
+seuratObjCDC1$sctype_classification[changecells] <- "Migratory dendritic cells 1"
+
+```
+
+#Annontation Post-Processing of CDC1
+```{r}
+
+ PostAnnotClustCDC1 <- DimPlot(seuratObjCDC1, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')+ggtitle("CDC Final result")
+ PostAnnotClustCDC1
+
+```
+ 
+## Notes
+```{r}
+
+blurb = paste("\n   Notes for The Post-Processing of SAM3.\n",
+         " 
+          Removed Cluster:
+          
+        Cluster 9: 89% -----> Removed
+        Cluster 17: 89% -----> Removed
+        Cluster11: Part selected 94% -- Removed
+        
+        Checked Unknown --> = CDC1
+        Checked RBC part of CDC1 --> = CDC1
+        Checked Migratory cells ---> Seperated Migratory DCs 1 and 2
+        Checked Proliferating cells ---> Were correct
+  ")
+Notes <- ggplot() + 
+  annotate("text", x = 4, y = 25, size=4, label = blurb) + 
+  theme_void()
+Notes
+
+```
+
+```{r}
+#Saving Object
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Post-process/"))
+
+saveRDS(seuratObj,paste0("SeuratObj_Post-Process_",FileName,".rds"))
+saveRDS(seuratObjCDC1,paste0("SeuratObj_Post-Process_CDC1_",FileName,".rds"))
+
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Post-process/"))
+pdf(paste0("Graphs Post-Process_",FileName,".pdf"), width = 14,
+  height = 10)
+
+PlotSeurat 
+#PlotSeuratR 
+PostAnnotClust 
+ClustRemoveMap1
+ClustRemoveMap2
+ClustRemoveMap3
+PlotUnknown1
+PlotUnknown2
+PlotUnknown3
+PlotUnknown4
+PlotUnknown5
+if (exists("PlotUnknown")) {print(PlotUnknown)}
+PlotSeuratCDC1
+PostAnnotClustCDC1
+Notes
+dev.off()
+
+
+```
+
+

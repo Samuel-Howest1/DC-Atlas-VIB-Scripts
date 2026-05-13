@@ -60,14 +60,12 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM2")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO005")
 FileName <- basename(getwd())
 
-# For SAM2 and SAM3
-seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
 
-# For the rest of the datasets
-#seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_HTO_",FileName,".rds"))
+#Loading Seaurat object
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_HTO_",FileName,".rds"))
 
 
 
@@ -83,11 +81,20 @@ ncol(seuratObj)
 seuratObjR <- subset(seuratObj,seuratObj@meta.data$HTO_GUESS != "Doublet" & seuratObj@meta.data$HTO_GUESS != "Negative")
 ncol(seuratObjR)
 
-PlotSeurat <- DimPlot(seuratObj, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
-PlotSeuratR <- DimPlot(seuratObjR, label=T, repel=T)+ggtitle(paste0("Graph",FileName,""))
+Idents(seuratObjR) <- "HTO_GUESS"
+
+PlotSeurat <- DimPlot(seuratObj, label=T, repel=T )+ggtitle(paste0("Graph ",FileName))
+PlotSeuratR <- DimPlot(seuratObjR, label=T, repel=T)+ggtitle(paste0("Graph",FileName))
 
 PlotSeurat
 PlotSeuratR 
+
+Idents(seuratObjR) <- "seurat_clusters"
+
+PlotSeuratRClust <- DimPlot(seuratObjR, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
+PlotSeuratRClust
+
+# ALL Doublets are removed
 
 ```
 
@@ -96,20 +103,14 @@ PlotSeuratR
 ## Manual Cluster selection of part of a cluster
 ```{r}
 
-selected <- CellSelector(DimPlot(seuratObjR))
-
-PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = selected))/length(WhichCells(seuratObjR, selected)))*100
-PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
-
-PrecentageDoublet
+#selected <- CellSelector(DimPlot(seuratObjR))
+#PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = selected))/length(WhichCells(seuratObjR, selected)))*100
+#PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
+#PrecentageDoublet
 
 ```
 
-
-
-
 ## Manual Cluster selection of Whole cluster
-
 Selection
 ```{r}
 ClusterData <- seuratObj@meta.data
@@ -136,23 +137,57 @@ ClustRemoveMap3
 ## Checking Unknow/ Suspicious cells
 ```{r}
 # isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjR, idents = c(13,14,21)) #expression = sctype_classification == "Unknown")
+unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "B-cell")
 # Making a plot showcasing these genes
-PlotUnknown <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
 
-# Change title to what you'r looking at
-PlotUnknown8 <- PlotUnknown +plot_annotation(title = "Migratory dendritic cells 2 (13,14,21),Closer Look: Check for Migratory dendritic cells 1")
+# Checking B-cell
+PlotUnknown5 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Ms4a1","Cd79a","Cd19","Ebf1"))
+PlotUnknown5 <- PlotUnknown5 +plot_annotation(title = "Controling B-cell")
 
-PlotUnknown1
-PlotUnknown2
-PlotUnknown3
-PlotUnknown4
 PlotUnknown5
-PlotUnknown6
-PlotUnknown7
-PlotUnknown8
 ```
 
+
+# Loading VBO_merge Object
+```{r}
+
+nCellsR <-ncol(seuratObjR)
+
+seuratObjVBO <- readRDS("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/VBO-Merge/seuratObj_paper_dietVBO_4-12_2024.rds")
+
+#Subset to only VBO005
+seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$orig.ident=="VBO005")
+
+# This is a eLNPS_8h conditions ---> Want only mature cells
+# Using seuratVBO we select of our own seuratObjR the Late mature cells
+
+# subset seuratObjVBO to only the Late mature CDC1 cells
+seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$Annotation_paper=="Late mature cDC1s")
+
+
+#Fixing seuratVBO names to match our own seuratobject
+VBOCellsSplit <- Cells(seuratObjVBO)
+tmp <- str_split(VBOCellsSplit,"_")
+VBOCells <-c()
+for (i in 1:length(tmp)){
+  VBOCells[i] <- tmp[[i]][1]
+}
+
+RenameCells(seuratObjVBO,new.names = VBOCells)
+
+
+# Keep only the seuratObjR that are late mature cells according to the seuratObjVBO
+seuratObjVBONAMES <- intersect(colnames(seuratObjR),VBOCells)
+seuratObjR <- subset(seuratObjR, cells=seuratObjVBONAMES)
+
+nCellsVBO <- ncol(seuratObjR)
+
+PlotVBO <- data.frame(
+  ObjectName= c("SeuratobjR Before" ,"seuratObjR After"),
+  Cells = c(nCellsR,nCellsVBO)
+)
+ggbarplot()
+```
 
 ## Adding A cluster
 ```{r}
@@ -253,7 +288,7 @@ seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells
 
 ```
 
-#Annontation Post-Processing of CDC1
+##Annontation Post-Processing of CDC1
 ```{r}
 
  PostAnnotClustCDC1 <- DimPlot(seuratObjCDC1, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')+ggtitle("CDC Final result")
@@ -261,7 +296,7 @@ seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells
 
 ```
  
-## Notes
+# Notes
 ```{r}
 
 blurb = paste("\n   Notes for The Post-Processing of SAM2.\n",
@@ -288,6 +323,7 @@ Notes
 
 ```
 
+#Saving Object
 ```{r}
 #Saving Object
 setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Post-process/"))
