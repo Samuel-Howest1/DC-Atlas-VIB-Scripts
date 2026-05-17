@@ -60,7 +60,7 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO005")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO004")
 FileName <- basename(getwd())
 
 
@@ -101,17 +101,14 @@ PlotSeuratRClust
 ## Checking Unknow/ Suspicious cells
 ```{r}
 # isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "B-cell")
+unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "Unknown")
 # Making a plot showcasing these genes
 
-# Checking B-cell
-PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Ms4a1","Cd79a","Cd19","Ebf1"))
-PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling B-cell")
 
 # Checking CDC1
-PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"
+PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"
 ))
-PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling CDC1")
+PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling CDC1")
 
 
 PlotUnknown1
@@ -129,7 +126,7 @@ seuratObjVBO <- readRDS("/Users/samue/Desktop/Stage VIB/Pre and Post processing 
 #Subset to only VBO005
 seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$orig.ident==FileName)
 
-# This is a eLNPS_8h conditions ---> Want only mature cells
+# This is a WT conditions ---> Want 
 # Using seuratVBO we select of our own seuratObjR the Late mature cells
 
 # subset seuratObjVBO to only the Late mature CDC1 cells

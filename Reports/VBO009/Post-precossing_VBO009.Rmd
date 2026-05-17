@@ -60,7 +60,7 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO005")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO009")
 FileName <- basename(getwd())
 
 
@@ -101,21 +101,17 @@ PlotSeuratRClust
 ## Checking Unknow/ Suspicious cells
 ```{r}
 # isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "B-cell")
+unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "Unknown")
 # Making a plot showcasing these genes
 
-# Checking B-cell
-PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Ms4a1","Cd79a","Cd19","Ebf1"))
-PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling B-cell")
 
 # Checking CDC1
-PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"
+PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"
 ))
-PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling CDC1")
+PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling CDC1")
 
 
 PlotUnknown1
-PlotUnknown2
 ```
 
 
@@ -126,14 +122,15 @@ nCellsR <-ncol(seuratObjR)
 
 seuratObjVBO <- readRDS("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/VBO-Merge/seuratObj_paper_dietVBO_4-12_2024.rds")
 
-#Subset to only VBO005
+#Subset to only VBO008
 seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$orig.ident==FileName)
+PlotseuratVBO <- DimPlot(seuratObjVBO, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
 
-# This is a eLNPS_8h conditions ---> Want only mature cells
-# Using seuratVBO we select of our own seuratObjR the Late mature cells
+# This is a eLNPs_2h conditions ---> Want only Early Mature cells
+# Using seuratVBO we select of our own seuratObjR the Early mature cells
 
 # subset seuratObjVBO to only the Late mature CDC1 cells
-seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$Annotation_paper=="Late mature cDC1s")
+seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$Annotation_paper=="Early mature cDC1s")
 
 
 #Fixing seuratVBO names to match our own seuratobject
@@ -169,8 +166,10 @@ BarplotVBO <- ggbarplot(
   palette = c("steelblue", "tomato"),
 )+
 scale_y_continuous(
-    breaks = seq(0, 14000, by = 2000)
-  )+ggtitle("Before and After Filtering based on VBO_Merge ")
+    breaks = seq(0,16000, by = 2000)
+  )+ggtitle("Before and After Filtering based on VBO_Merge ")+ylim(0,16000)
+
+PlotseuratVBO
 
 BarplotVBO
 
@@ -205,10 +204,12 @@ BarplotVBO
 # Notes
 ```{r}
 
-blurb = paste("\n   Notes for The Post-Processing of VBO005\n",
+blurb = paste("\n   Notes for The Post-Processing of VBO009\n",
          "
   - All doublets removed based on the HTO.data
-  - Used VBO_Merge annontation to filter cells
+  
+  - Used VBO_Merge annontation to filter cells: Only kept early Mature cells of eLNPs_2h condition
+    
   - Added the VBO_Merge annontation to seuratObjR
   ")
 Notes <- ggplot() + 
@@ -233,8 +234,9 @@ PlotSeurat
 PlotSeuratR 
 PostAnnotClust 
 PostAnnotClustR
+PlotseuratVBO
+BarplotVBO
 PlotUnknown1
-PlotUnknown2
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PostAnnotClustVBO
 Notes

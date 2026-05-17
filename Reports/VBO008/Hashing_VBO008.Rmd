@@ -1,0 +1,615 @@
+---
+title: "Hashing"
+output: html_document
+---
+# Use Multiplex Demux
+
+```{r}
+## Packages
+library("tidyverse")
+library("Seurat")
+library("SingleCellExperiment")
+library("scater")
+library("data.table")
+library("ggpubr")
+library("gridExtra")
+library("fitdistrplus") 
+library("dplyr")
+library("plyr")
+library("caret")
+library("openxlsx")
+library("ggplot2")
+library("tibble")
+library("scran")
+library("limma")
+library("ggrepel")
+library("intrinsicDimension")
+library("tidyr")
+library("purrr")
+library("ggrepel")
+library("clustree")
+library("limma")
+library("patchwork")
+library("future")
+library('RColorBrewer')
+
+```
+
+
+
+
+#Hashing Loading in HTO matrix
+
+```{r}
+#Load Seurat object
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO008")
+FileName <- basename(getwd())
+
+seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
+
+# Load HTO Matrix and add to the seuratobject
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO008")
+FileName <- basename(getwd())
+rawData <- Read10X("filtered_feature_bc_matrix")
+rawDataHTO <- rawData[["Custom"]]
+
+#Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
+#rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
+#Filter the Seuratobject To remove Hashtag without cells
+#HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
+#rawDataHTO <- rawDataHTO[HTO_Above_0, ]
+
+TargetHTO <- c("Hashtag1","Hashtag2","Hashtag3","Hashtag4")
+rawDataHTO <- rawDataHTO[TargetHTO,]
+
+seuratObj[["HTO"]] <- CreateAssayObject(counts = rawDataHTO[,colnames(seuratObj)] ,min.cells = 1)
+
+
+```
+
+
+## Normalize HTO data
+```{r}
+seuratObj <- NormalizeData(seuratObj, assay = "HTO", normalization.method = "CLR")
+
+# To check HTO
+# FeaturePlot(seuratObj, features="Hashtag1", pt.size=0.10,label.size = 8,order=T)
+```
+
+## Dimension reduction (VOOR OF NA DEMulitplexing)
+```{r}
+
+VariableFeatures(seuratObj, assay = "HTO") <- rownames(seuratObj[["HTO"]])
+
+seuratObj <- ScaleData(seuratObj, assay = "HTO" )
+
+seuratObj <- RunPCA(object = seuratObj, assay = "HTO", features = VariableFeatures(seuratObj, assay = "HTO"), npcs = nrow(seuratObj@assays$HTO), ndims.print = 1:5, nfeatures.print = 8, reduction.name = "HTO_pca",reduction.key = "htoPC_")
+
+Elbow <- ElbowPlot(seuratObj, reduction = "HTO_pca")
+Elbow
+
+n_dims <- ncol(Embeddings(seuratObj[["HTO_pca"]]))
+
+seuratObj <- RunUMAP(seuratObj, dims = 1:n_dims,assay = "HTO", reduction ="HTO_pca",
+                       reduction.name = "HTO_umap", reduction.key = "HTOUMAP_")
+# ???? Wat moet ik hier uit halen
+ PlotHTO <- DimPlot(seuratObj, reduction = "HTO_umap",label = T, repel = T, label.size = 4)
+ PlotHTO
+```
+## Demultiplexing
+```{r}
+#SAM05 there are cell with no hashtags
+
+seuratObj <- MULTIseqDemux(seuratObj, assay = "HTO", autoThresh = T,maxiter=5,qrange = seq(from = 0.1, to =  0.9, by =0.05))
+
+
+
+```
+
+## Creating Metadata (Provided by VIB)
+```{r}
+# creating of HTO.data, the metadata
+# Get HTO data 
+# t -> Transpose matrix ---> Hashtag col, Cells row
+HTO.data <- as.data.frame(t(as.matrix(GetAssayData(object = seuratObj, assay = "HTO", layer  = "counts")))) #hashcounts
+
+#Save data
+HTO.data.raw <- HTO.data
+features <- colnames(HTO.data.raw) #hashtags
+
+# Find the max hash for every cell
+HTO.data$maxHTO <- apply(HTO.data.raw,1,which.max) #max hash
+HTO.data <- mutate(HTO.data,maxHTO=features[maxHTO])
+
+# Save Hastag value in this col
+HTO.data$maxval <- apply(HTO.data.raw,1,max)
+
+# Function for second strongest hastag (Needed?????)
+sec.fun <- function(x){features[order(x)[length(x)-1]]}
+secval.fun <- function(x){x[order(x)[length(x)-1]]}
+HTO.data$secHTO <- apply(HTO.data.raw,1,sec.fun)
+HTO.data$secval <- apply(HTO.data.raw,1,secval.fun)
+
+# Add number of RNA UMI per cell
+HTO.data$nUMI <- seuratObj$nCount_RNA
+# Add number of genes per cell
+HTO.data$nGene <- seuratObj$nFeature_RNA
+# Add cell names
+HTO.data$cell <- rownames(HTO.data.raw)
+
+#Multiplex Metadata (adding the multiplex Demux to metadata )
+HTO.data$Multi_label <- seuratObj$MULTI_ID
+HTO.data$Multi_glob <- seuratObj$MULTI_classification
+HTO.data$Multi_class <- HTO.data$Multi_label
+
+# Relabel factor levels (Hashtags become Singlet)
+levels(HTO.data$Multi_class) <- ifelse(levels(HTO.data$Multi_class) %in% c("Doublet","Negative"),levels(seuratObj$MULTI_ID),"Singlet")
+# Fixing the order of levels
+HTO.data$Multi_class <- factor(HTO.data$Multi_class,levels(HTO.data$Multi_class)[c(2,1,3)])
+
+
+max.barplot <-   ggplot(HTO.data,aes(x=maxHTO)) +
+  geom_bar(aes(y = (..count..)/sum(..count..)),fill = "#0073C2FF") + 
+  scale_y_continuous(labels=scales::percent) +
+  labs(y = "Percent", fill="class") +
+  theme_bw() +
+  theme(legend.position = "none", text = element_text(size=20)) +
+  ggtitle("Cell frequencies per maximum Hashtag")  
+max.barplot
+
+
+
+```
+
+
+## Visualization
+```{r}
+secmax_MultiLabel <- ggplot(HTO.data,aes(x = log2(maxval+1),y = log2(secval+1),color=Multi_label)) +
+  geom_point(size=0.75) +
+  geom_abline(slope = 1 ,color = "blue" ) +
+  geom_abline(slope = 0.80 ,color = "red" ) +
+  theme_bw() +
+  theme(text = element_text(size=15)) +
+  guides(colour = guide_legend(override.aes = list(size=3))) +
+  facet_wrap(~maxHTO) +
+  #scale_color_manual(values=c("firebrick", "coral","limegreen")) + #Doublet Negative Singlet
+  ggtitle("Log2 counts per maximum and second largest value HTO: Multiseq_Demux")
+
+secmax_MultiLabel
+```
+
+
+
+##NEEDED FOR HASHING COMPARISON
+```{r}
+# Vector needed
+MULTI_ID <- HTO.data$Multi_label
+# hash.ID ? NOT FOUND
+# HTO_classification.global? NOT found
+
+Multiseq <- DimPlot(seuratObj, reduction = "HTO_umap", group.by = "MULTI_ID", pt.size = 1)+ggtitle("Multiseq:label")
+Multiseq
+
+
+#HTOUmap <- DimPlot(seuratObj, reduction = "HTO_umap", group.by = "MULTI_ID", pt.size = 1)+ggtitle("Multiseq:label")
+#HTOUmap
+
+
+```
+
+
+
+```{r}
+# Vector Needed for graph
+PresentHashingAntibodies<-c("Hashtag1","Hashtag2",
+                            "Hashtag3", "Hashtag4")
+HTOCounts<-as.matrix((rowSums(as.matrix((seuratObj@assays$HTO@counts)))))
+TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
+
+
+#pdf(file = paste0(output.dir,"Plots/HTO/Overview_HTO.pdf"), width = 10, height = 10)
+
+# Use to see specfic hastag in detail
+#FeaturePlot(seuratObj, features="Hashtag1", pt.size=0.10,label.size = 8,order=T)
+# FeaturePlot(seuratObj, features="Hashtag2", pt.size=0.10,label.size = 8,order=T)
+
+# SAM05 geen Hastag6 in feature plot
+HastagPlots <- FeaturePlot(seuratObj, features=(TrueDetectedAbs),ncol=2, pt.size=0.1, label.size = 8,order=T)
+
+
+HastagPlots2 <- DimPlot(seuratObj,group.by = "MULTI_ID", label = F, pt.size = 0.1) + ggtitle("MULTIseqDemux")
+HastagPlots3 <- DimPlot(seuratObj,split.by = "MULTI_ID", group.by = "MULTI_ID", label = F, pt.size = 0.1, ncol = 2) + ggtitle("MULTIseqDemux")
+
+HastagPlots
+HastagPlots2
+HastagPlots3
+```
+
+
+
+### Fetch doublets from hashing ###
+# -> uses Hashing data to find Doublets and Negatives
+```{r}
+## Create HTO.data
+# get hashtags present
+tags <- rownames(seuratObj@assays$HTO@data)
+# get barcodes
+barcodes <- colnames(seuratObj@assays$HTO@data)
+# make data frame 
+HTO.data <- as_tibble(t(seuratObj@assays$HTO@data))
+HTO.data$barcodes <- barcodes
+
+## Add column with the highest hashtag and its value
+max.tags <- c()
+for (barcode in HTO.data$barcodes){
+  #print(names(which.max(HTO.data[,barcode])))
+  highest.HTO <- names(which.max(HTO.data[HTO.data$barcodes == barcode,]))
+  #seuratObj@meta.data[rownames(seuratObj@meta.data) == barcode,"maxHTO"] <- highest.HTO
+  max.tags <- append(max.tags, highest.HTO)
+  #print(rownames(HTO.data[HTO.data[[barcode]] == max(HTO.data[[barcode]]),])) # for the maximum value
+}
+
+# merge with HTO.data
+HTO.data <- cbind(HTO.data,max.tags)
+# get value of the max hashtag
+HTO.data$max.HTO.val <- apply(HTO.data[,tags],1,max)
+
+#View(HTO.data)
+
+## Visualize Hashtag Expression levels
+p <- ggplot(HTO.data, aes(x=max.tags, y=max.HTO.val, fill=max.tags)) +
+  geom_boxplot() +
+  geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=18)
+  ) +
+  ggtitle("Check if expression levels are similar!") +
+  xlab("") + theme_classic()
+print(p)
+
+```
+## Create Hashtag.info table | Causes Near Crashes DONT USE 
+```{r}
+############## NOTE : HEB DEZE CODE AANGEPAST #########################""
+hashtag.info <- as_tibble(tags)
+colnames(hashtag.info) <- "tag"
+plot_list <- list()
+i=1
+# Add quantile percentages for each hashtag
+q.data <- tibble()
+for (tag in tags){
+  # get quantile distribution (MANUAL threshold)
+  q <- quantile(HTO.data[HTO.data$max.tags == tag,tag],probs = seq(0, 1, by=0.01), names = T)
+
+# Experession cutoff
+
+  # find expression level were to place cutoff for each hashtag
+  # In the plots we should see 2 peaks and cut_off needs to be in the middle of those peaks
+  # We also need to make sure we actually see those peaks! if not this method probably will not work
+  df <- HTO.data[,c(tag,"max.tags")]
+  # get density with good precision
+  #d <- density(df[[tag]])
+  #In case you need a higher "precision"
+  d <- density(df[[tag]], n=1e4)
+  
+  #Two ways to get highest Peak
+  #d$x[d$y==max(d$y)]  #Gives you all highest Peaks
+  #d$x[which.max(d$y)] #Gives you the first highest Peak
+  #3 ways to get all Peaks
+  d$x[c(F, diff(diff(d$y)>=0)<0)] #This detects also a plateau
+  #d$x[c(F, diff(sign(diff(d$y)))<0)]
+  #d$x[which(diff(sign(diff(d$y)))<0)+1]
+  
+  #In case you also want the height of the peaks
+  peak_positions <- data.frame(d[c("x", "y")])[c(F, diff(diff(d$y)>=0)<0),]
+  colnames(peak_positions) <- c(tag,"density")
+  # extract peaks
+  x_first_peak <- peak_positions[1,tag]
+  x_second_peak <- peak_positions[2,tag]
+  y_first_peak <- peak_positions[1,"density"]
+  y_second_peak <- peak_positions[2,"density"]
+  
+  # Find minimum between peaks
+  MinYDensity <- min(d$y[d$x > x_first_peak & d$x < x_second_peak])
+  index <- which(d$y == MinYDensity)
+  # min_expr <- d$x[index] #removed by clint!!
+  
+  tags <- rownames(seuratObj@assays$HTO@data)
+  q_manual_clint<-c(1.05,1.0,1.0,1.1,1.1,1.0,1.0,1.1)
+  names(q_manual_clint)<-tags[1:8]
+  
+  min_expr<-q_manual_clint[tag]  #Clint
+
+
+  ## Barplot
+  barplot <- ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
+  geom_histogram(position = "stack", bins = 75) +
+  geom_vline(linetype="dashed",xintercept = min_expr, color = "red")+
+    
+    xlim(0,3)+ # Add and remove when necessary
+  theme_classic(base_size = 20) + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  print(barplot)
+  plot_list[[i]] <- barplot
+  i = i+1
+  
+  ## Densityplot
+  #densityplot <- ggplot(df, aes(x = .data[[tag]])) +
+  #geom_density()+
+  #geom_vline(linetype="dashed",xintercept = x_first_peak, color = "black") +
+  #geom_vline(linetype="dashed",xintercept = x_second_peak, color = "black") +
+  #geom_vline(linetype="dashed",xintercept = min_expr, color = "red") +
+  #theme_classic() + ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+  #print(ggarrange(barplot,densityplot))
+
+    PlotCutoff <- ggplot(df, aes(x = .data[[tag]], fill = max.tags)) +
+      geom_histogram(aes(y = ..density..),position = "stack", bins = 20) +
+      geom_density(aes(x = .data[[tag]], fill = NULL)) +
+      geom_vline(linetype="longdash",xintercept = x_first_peak, color = "black") +
+      geom_vline(linetype="longdash",xintercept = x_second_peak, color = "black") +
+      geom_vline(linetype="solid",xintercept = min_expr, color = "red", size = 2) +
+      scale_x_continuous(breaks=seq(0, 10, 0.5)) + #Clint
+      theme_classic(base_size = 20) +  
+      ggtitle(paste0("Normalised ",tag, " Expression in all Cells"))
+
+    
+    print(PlotCutoff)
+    plot_list[[i]] <- PlotCutoff
+  
+    i = i+1
+  #dev.off()
+
+  
+  
+  
+  # Add automaticly found value to quantile range
+  q["auto"] <- min_expr
+  
+  
+  # Add information to tibble
+  q.data <- rbind(q.data,as_tibble(as.list(q)))
+
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# merge with hashtag.info
+hashtag.info <- cbind(hashtag.info,q.data)
+
+#View(hashtag.info)  
+## get for each cell in HTO.data expression of lower x% of all the cells for each hashtag! if cell in lower x% foor all tags -> negative
+
+#Chech if and classifie if cell is consider negative
+q.cutoff <- "auto"
+# loop over all values in HTO.data
+for (c in 1:nrow(HTO.data)){
+  for (tag in tags){
+    # check if value is lower then x% quantile for all tags
+    if (HTO.data[[tag]][c] <= hashtag.info[hashtag.info$tag == tag,q.cutoff]){
+      HTO.data[c,paste0(tag,"_neg")] <- T
+    } else {
+      HTO.data[c,paste0(tag,"_neg")] <- F
+    }
+  }
+}
+
+# get colnames of negatives () |Get the cel names of the negatives
+negatives_cols <- c()
+for (tag in tags){
+  negatives_cols <- append(negatives_cols,paste0(tag,"_neg"))
+}
+
+# loop over all negative columns to get all negatives in lower left corner aka all cells who fall below the lower quantile for all hashtags
+HTO.data$negative <- apply(HTO.data[,negatives_cols], 1, all)
+table(HTO.data$negative)
+
+# check if a hashtag is above the minimum quantile for multiple hashtags -> these are doublets! | chech if the cell has multiple hastags
+
+for (c in 1:nrow(HTO.data)){
+  # fetch status for all hashtags
+  status <- c()
+  for (tag in tags){
+    if (HTO.data[c,tag] >= hashtag.info[hashtag.info$tag == tag,q.cutoff]){
+      status <- append(status,T)
+    } else {status <- append(status,F)}
+  }
+  # check if it is positive for multiple hashtags if True add true to doublet column
+  if (sum(status==TRUE) > 1){
+    HTO.data[c,"doublet"] <- T
+  } else {HTO.data[c,"doublet"] <- F}
+}
+table(HTO.data$doublet)
+
+## Merge DoubletFinder Information with HTO.data
+# add barcode names to metadata
+seuratObj@meta.data$barcodes <- rownames(seuratObj@meta.data)
+# Fetch doublet information from DoubletFinder and the barcodes
+
+data <- as_tibble(seuratObj@meta.data[,c("barcodes","scDblFinder_class")])
+
+# merge
+HTO.data <- merge(HTO.data,data)
+
+### ASSIGN TOOL RESULTS ###
+# HTO cutoff method
+HTO.data$HTO_Results <- NA
+HTO.data[,"HTO_Results"] <- HTO.data$max.tags
+HTO.data[HTO.data$negative == T,"HTO_Results"] <- "Negative"
+HTO.data[HTO.data$doublet == T,"HTO_Results"] <- "Doublet"
+table(HTO.data$HTO_Results)
+#HTO.data$HTO_Results <- factor(HTO.data$HTO_Results)
+
+# doubletFinder
+HTO.data$DF_Results <- NA
+HTO.data[HTO.data$scDblFinder_class == "singlet","DF_Results"] <- "Singlet"
+HTO.data[HTO.data$scDblFinder_class == "doublet","DF_Results"] <- "Doublet"
+
+#HTO.data[HTO.data$scDblFinder.class == "High Confidence" | HTO.data$scDblFinder.class == "High Confidence adjusted","DF_Results"] <- "Doublet_high" #clint
+table(HTO.data$DF_Results)
+
+
+### ASSIGN DOUBLETS (HTO + DoubletFinder) HTO_STRICT_GUESS ###
+
+#################################################################################################################
+# Because scdblfinder doesn't assign cells with high or low confidence there is no difference between strict and lenient guesses. We look at HTO.data$doublet for determining Doublets. 
+
+#HTO.data$doublet contains only the HTO.data doublets. Change this to DF_Results to also remove the scdblfinder found cells if neccessery
+#################################################################################################################
+
+# Hashtags first
+#HTO.data$HTO_STRICT_GUESS <- HTO.data$max.tags
+# assign negatives
+#HTO.data[HTO.data$negative == T,"HTO_STRICT_GUESS"] <- "Negative"
+# assign Doublets
+#HTO.data[HTO.data$doublet == T,"HTO_STRICT_GUESS"] <- "Doublet"
+# Because scdblfinder doesn't assign cells with high or low confidence 
+#HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_STRICT_GUESS"] <- "Doublet"
+#HTO.data[HTO.data$DF_Results == "Doublet_low","HTO_STRICT_GUESS"] <- "Doublet"
+#table(HTO.data$HTO_STRICT_GUESS)
+
+### ASSIGN DOUBLETS (HTO + DoubletFinder) HTO_GUESS ###
+# Hashtags first
+HTO.data$HTO_GUESS <- HTO.data$max.tags
+# assign negatives
+HTO.data[HTO.data$negative == T,"HTO_GUESS"] <- "Negative"
+# assign Doublets
+HTO.data[HTO.data$doublet == T,"HTO_GUESS"] <- "Doublet"
+
+#HTO.data[HTO.data$DF_Results == "Doublet_high","HTO_GUESS"] <- "Doublet"
+#HTO.data[HTO.data$doublet.class == "Doublet_low","HTO_GUESS"] <- "Doublet"
+
+table(HTO.data$HTO_GUESS)
+
+#HTO.data$DF_Results <- factor(HTO.data$DF_Results)
+############################
+
+## ADD TO SEURATOBJ
+# fix stupid error | removing colums out of seurat metadata
+seuratObj@meta.data$HTOClass <- NULL # BUG FIX
+seuratObj@meta.data$HTO_Results <- NULL 
+seuratObj@meta.data$DF_Results <- NULL 
+seuratObj@meta.data$HTO_STRICT_GUESS <- NULL 
+seuratObj@meta.data$HTO_GUESS <- NULL
+
+# add to seurat metadata 
+metadata <- seuratObj@meta.data
+#Removed "HTO_STRICT_GUESS" # Samuel
+HTOClass <- HTO.data[,c("barcodes","HTO_Results","DF_Results","HTO_GUESS")]#"FM_Results",
+metadata <- merge(metadata,HTOClass,by.x = "barcodes",by.y = "barcodes")
+
+## Make correct order in metadata!!
+rownames(metadata)<-metadata$barcodes
+all(rownames(metadata)==rownames(seuratObj@meta.data))
+metadata<-metadata[seuratObj@meta.data$barcodes,]
+
+# This HAS TO BE TRUE !
+all(rownames(metadata)==rownames(seuratObj@meta.data))
+
+# Turning results into factors
+seuratObj <- AddMetaData(seuratObj,metadata$HTO_Results,col.name = "HTO_Results")
+seuratObj@meta.data$HTO_Results <- factor(seuratObj@meta.data$HTO_Results)
+
+seuratObj <- AddMetaData(seuratObj,metadata$DF_Results,col.name = "DF_Results")
+seuratObj@meta.data$DF_Results <- factor(seuratObj@meta.data$DF_Results)
+
+# seuratObj <- AddMetaData(seuratObj,metadata$FM_Results,col.name = "FM_Results")
+# seuratObj@meta.data$FM_Results <- factor(seuratObj@meta.data$FM_Results)
+
+#Removed
+#seuratObj <- AddMetaData(seuratObj,metadata$HTO_STRICT_GUESS,col.name = "HTO_STRICT_GUESS")
+#seuratObj@meta.data$HTO_STRICT_GUESS <- factor(seuratObj@meta.data$HTO_STRICT_GUESS)
+
+seuratObj <- AddMetaData(seuratObj,metadata$HTO_GUESS,col.name = "HTO_GUESS")
+seuratObj@meta.data$HTO_GUESS <- factor(seuratObj@meta.data$HTO_GUESS)
+
+
+# Numbers for graphs
+counts <- as.matrix(GetAssayData(object = seuratObj, assay = "HTO", layer = "counts")[,colnames(x = seuratObj)])
+ncells <- dim(counts)[2]
+
+
+## Vis extra
+LENIENT_GUESS<-seuratObj@meta.data$HTO_GUESS
+LENIENT_GUESS_df <- as.data.frame(LENIENT_GUESS) %>%
+  group_by(LENIENT_GUESS) %>%  dplyr::count() %>% dplyr::mutate(perc = round(100*n/ncells,2))
+LENIENT_GUESS_results <- ggplot(LENIENT_GUESS_df, aes(x = LENIENT_GUESS, y = perc)) +
+  geom_bar(fill = "#0073C2FF", stat = "identity") +
+  geom_text(aes(label = paste("",perc,"%\nn=",n,"")), size=3.5, vjust = -0.3) +
+  ggtitle("Classification according to pipeline Maarten") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(x = "", y = "Percentage of cells") +
+  ylim(0, 125) +
+  theme(axis.text.x = element_text(angle = 45, size=12, hjust = 1))
+
+LENIENT_GUESS_results
+
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/"))
+
+# ?????????????????????????????????????????????????????????????????????????
+seuratObj$MULTI_ID_merge<-paste0(seuratObj$orig.ident,"_",seuratObj$MULTI_ID)
+seuratObj$LENIENT_GUESS_merge<-paste0(seuratObj$orig.ident,"_",seuratObj$HTO_GUESS)
+
+pdf(file = paste0("Overview_Plots_",FileName,".pdf"), width = 10, height = 12)
+DimPlot(seuratObj,group.by = "MULTI_ID_merge", label = F, pt.size = 0.1) + ggtitle("MULTIseqDemux")
+DimPlot(seuratObj,split.by = "MULTI_ID_merge", group.by = "MULTI_ID_merge", label = F, pt.size = 0.1, ncol = 1) + ggtitle("MULTIseqDemux")
+DimPlot(seuratObj,group.by = "LENIENT_GUESS_merge", label = F, pt.size = 0.1) + ggtitle("LENIENT_GUESS")
+DimPlot(seuratObj,split.by = "LENIENT_GUESS_merge", group.by = "LENIENT_GUESS_merge", label = F, pt.size = 0.1, ncol = 1) + ggtitle("LENIENT_GUESS")
+
+dev.off()
+
+#######################################################################################################
+
+```
+
+## Saving Results
+
+```{r}
+## Save results
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/"))
+saveRDS(HTO.data, paste0("HTO_data_prediction_",FileName,"_HTO.rds"))
+saveRDS(seuratObj, paste0("SeuratObj_HTO_",FileName,".rds"))
+
+
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/"))
+pdf(paste0("ALL_Graphs__Hashing_",FileName,".pdf"), width = 14,
+  height = 10)
+PlotHTO
+max.barplot
+secmax_MultiLabel
+Multiseq
+#HTOUmap
+HastagPlots
+HastagPlots2
+HastagPlots3
+p
+plot_list
+LENIENT_GUESS_results
+dev.off()
+
+
+#Compare
+count = 0
+for (i in 1:nrow(seuratObj@meta.data)){
+  if(as.character(seuratObj@meta.data[i,"MULTI_ID"]) == as.character(seuratObj@meta.data[i,"HTO_GUESS"])){
+    count = count + 1
+  }
+}
+count
+
+```
+

@@ -1,0 +1,745 @@
+---
+title: "Pre-processing"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+Pre-processing of CITE-seq data This Script is the first and will be used to pre-process VBO009 Provided data
+
+```{r}
+
+###############################################
+#LOADING PACKAGE
+###############################################
+
+library("renv")
+#library("clustree")
+library("tidyverse")
+library("Seurat")
+library("SingleCellExperiment")
+library("scater") 
+library("scran") # Note for Windows --> Bluster dependencie doesnt compile properly in windows, mannulay add the bluster package to library. Download ---> https://bioc.r-universe.dev/bluster
+library('fields')
+library("dplyr")
+library("stringr")
+library("readr")
+library("ggplot2")
+library("HGNChelper") #For sc_type nesseacry
+library("scDblFinder")
+library("readxl")
+library("patchwork")
+library("presto") 
+# issue downloading presto --> use following commands:
+#pak::pak("RcppArmadillo@0.12.8.0.0", ask = FALSE)
+#.rs.restartR()
+#pak::pak("immunogenomics/presto")
+library("clustree") # Note:Be sure you have the 4.5 version of Rtools
+library("openxlsx")
+```
+
+```{r}
+#############################################
+#RNA
+############################################
+setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO009")
+FileName <- basename(getwd())
+rawData <- Read10X("filtered_feature_bc_matrix")
+rawDataRNA <- rawData[["Gene Expression"]]
+# rawDataRNA <- as.matrix(rawData$Gene Expression) Keeps all Zero values, but makes object to big for current pc
+
+# Rawdata is 6.1 GB, it can be loaded but not examined ---> Took a subset of cells
+# rawDataRNA <- rawDataRNA[, 1:2000]
+
+```
+
+```{r}
+sce<-SingleCellExperiment(list(counts=rawDataRNA))
+# Everything starting with MT put in is.mito vector
+is.mito <- grepl("^MT-", rownames(sce), ignore.case = TRUE)
+
+#Scuttle function: addPerCellQC: Add QC metrics to a SummarizedExperiment
+#QCmetric: Compute per-cell quality control metrics for a count matrix or a SingleCellExperiment. 
+
+sce<- addPerCellQC(sce, subsets=list(Mito=is.mito))
+
+# Make Metadata dataframe
+metaData<-data.frame("staticNr"=colnames(rawDataRNA), 
+                     "nGene"=sce$detected,
+                     "nUMI"=sce$sum,
+                     "percent.mito"=sce$subsets_Mito_percent, 
+                     stringsAsFactors = F)
+#Rownames fixen
+rownames(metaData)<-metaData$staticNr
+metaData$staticNr<-1
+
+
+```
+
+```{r}
+# FILTERING Test
+
+sampleName<-"GSM_2677817"
+experiment <- sampleName
+batch <- rep(sampleName, colnames(rawDataRNA) %>% length())
+
+# Setting cut offs (Increased the cutoffs, Still Increase?)
+# Nummber of genes
+nmad_low_feature<-3
+nmad_high_feature<-3
+
+# Total counts all gene in a cell
+nmad_low_UMI<-3
+nmad_high_UMI<-3
+
+# Precentage Mitchondrial gene
+nmad_high_mito<- 5
+
+#Filter both Low and High outliers out
+feature.drop.low <- isOutlier(sce$detected, nmads=nmad_low_feature, type="lower", log=TRUE,batch = batch)
+feature.drop.high <- isOutlier(sce$detected, nmads=nmad_high_feature, type="higher", log=TRUE,batch = batch)
+# Putting everything togheter
+feature.drop<-as.logical(feature.drop.low + feature.drop.high,batch = batch)
+
+#Filter both Low and High outliers out
+libsize.drop.low <- isOutlier(sce$sum, nmads=nmad_low_UMI, type="lower", log=TRUE,batch = batch)
+libsize.drop.high <- isOutlier(sce$sum, nmads=nmad_high_UMI, type="higher", log=TRUE,batch = batch)
+
+# Putting everything togheter
+libsize.drop<-as.logical(libsize.drop.low+libsize.drop.high)
+
+#Filtering High out
+mito.drop.high <- isOutlier(sce$subsets_Mito_percent, nmads=nmad_high_mito, type="higher",batch = batch)
+mito.drop <- as.logical(mito.drop.high)
+
+
+# Add dropped cells to metadata
+metaData$nGene.drop=feature.drop
+metaData$nUMI.drop=libsize.drop
+metaData$mito.drop=mito.drop
+metaData$final.drop=feature.drop | libsize.drop | mito.drop
+
+#Removing the outliers
+#The filted data is put in a seprate object
+scef <- sce[,!(libsize.drop | feature.drop | mito.drop)]
+
+# Creating a Filter Metadata for the plots
+metaDataF<-data.frame("staticNr"=colnames(scef),
+                     "nGene"=scef$detected,
+                     "nUMI"=scef$sum,
+                     "percent.mito"=scef$subsets_Mito_percent, 
+                     stringsAsFactors = F)
+rownames(metaDataF)<-metaDataF$staticNr
+metaDataF$staticNr<-1
+
+# Defining the cutoffs
+ul.mito <- attr(mito.drop.high,'thresholds')[2]
+ll.cd <- attr(libsize.drop.low,'thresholds')[1]
+ul.cd <- attr(libsize.drop.high,'thresholds')[2]
+ll.ng <- attr(feature.drop.low,'thresholds')[1]
+ul.ng <- attr(feature.drop.high,'thresholds')[2]
+```
+
+#Graphs Before and after
+
+Graph of data Before and After Filtering Here we make a scatter, histogram and violin plot of the data before and after its gets filtered (Note: Verbeter look van grafieken)
+
+```{r}
+
+MitoPrecentage <- sce$subsets_Mito_percent
+
+sctplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_point(aes(colour = MitoPrecentage ))+
+  scale_colour_gradientn(colours=terrain.colors(10), limits=c(0,4))+
+  
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.5)+
+geom_hline(yintercept = ll.ng,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_hline(yintercept = ul.ng,linetype="dotted", 
+                color = "red", size=1.5)+
+    theme_bw()
+
+MitoPrecentageF <- scef$subsets_Mito_percent
+
+sctplt2 <- ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
+  geom_point(aes(colour = MitoPrecentageF ))+
+  scale_colour_gradientn(colours=terrain.colors(10))+
+  
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.5)+
+geom_hline(yintercept = ll.ng,linetype="dotted", 
+                color = "blue", size=1.5)+
+   geom_hline(yintercept = ul.ng,linetype="dotted", 
+                color = "red", size=1.5)+
+  theme_bw()
+
+sctplt1 
+sctplt2
+
+# Zoomed in Plots
+sctplt1+ coord_cartesian(ylim = c(0, 2500),xlim = c(0,2500))
+sctplt2+ coord_cartesian(ylim = c(0, 2500),xlim = c(0,2500))
+
+```
+
+```{r}
+hist1 <- ggplot(metaData, aes(x = nUMI)) +
+  geom_histogram(binwidth=100)+  
+  geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.1)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.1)+
+  theme_bw()
+
+hist2 <- ggplot(metaDataF, aes(x = nUMI)) +
+  geom_histogram(binwidth=100)+
+    geom_vline(xintercept = ll.cd,linetype="dotted", 
+                color = "blue", size=1.1)+
+   geom_vline(xintercept = ul.cd,linetype="dotted", 
+                color = "red", size=1.1)+
+  theme_bw()+
+
+hist1 
+hist2
+
+```
+
+```{r}
+
+vlplt1 <- ggplot(metaData,aes(x=nUMI, y=nGene)) + 
+  geom_violin(fill="red")+
+  theme_bw()
+
+vlplt2 <-ggplot(metaDataF,aes(x=nUMI, y=nGene)) + 
+  geom_violin(fill= "green")+
+  theme_bw()
+
+vlplt1 + vlplt2
+```
+
+## Mitochondrial gene Percentage plot
+
+```{r}
+Mito1 <- ggplot(metaData, aes(x=MitoPrecentage)) + 
+  geom_histogram(binwidth = 0.1)+
+  geom_vline(xintercept = ul.mito,linetype="dotted", 
+                color = "blue", size=1.5)
+
+Mito2 <- ggplot(metaDataF, aes(x=MitoPrecentageF)) + 
+  geom_histogram(binwidth = 0.1)+
+  geom_vline(xintercept = ul.mito,linetype="dotted", 
+                color = "blue", size=1.5)
+
+Mito1
+Mito2
+
+# Zoom in grafiek 1
+Mito1 + coord_cartesian(xlim = c(0,10))
+
+
+
+
+```
+
+##How many cells were removed during filtering?
+
+```{r}
+BeforeFiltering <- ncol(sce)
+AfterFilering <- ncol(scef)
+#AfterscDbl <-  table(scef$scDblFinder.class)
+
+print("How many cells removed?")
+print(paste("Before Filtering",BeforeFiltering))
+print(paste("After Filtering",AfterFilering))
+#print(paste("After scDblFinder:"))
+#AfterscDbl
+
+
+
+```
+
+##Creating Seurat Object
+
+```{r}
+rawDataFiltered<-rawDataRNA[rownames(scef),colnames(scef)]
+# Creating ADT RawData
+rawDataADT <- as.matrix(rawData$`Antibody Capture`)
+rawDataADT <- rawDataADT
+
+rm(rawData)
+rm(rawDataRNA)
+rm(sce)
+gc()
+
+# CREATE SEURAT OBJECT
+cells.to.keep <- colnames(scef)
+seuratObj <- CreateSeuratObject(rawDataFiltered, project = experiment, min.cells=1)
+
+#Adding scDblFinder data to the Seuratobject
+#seuratObj$scDblFinder.score <- scef$scDblFinder.score
+#seuratObj$scDblFinder.class <- scef$scDblFinder.class
+
+# Removing Object for performance
+rm(rawDataFiltered)
+rm(scef)
+gc()
+
+
+```
+
+##Normailzation
+
+```{r}
+#Creating Seurat Object
+seuratObj <- FindVariableFeatures(seuratObj, selection.method = 'vst', nfeatures = 2000)
+
+ seuratObj <- NormalizeData(seuratObj, normalization.method = "LogNormalize", scale.factor = 1e4)
+
+```
+
+##Dimensional reduction
+
+```{r}
+
+all.genes <- rownames(seuratObj)
+seuratObj <- ScaleData(seuratObj, features = all.genes)
+
+#seuratObj <- wilcoxauc(seuratObj, 'cell_type', seurat_assay = 'RNA') # Presto not in CRAN, Recieve error when using recommend command devtools::install_github("immunogenomics/presto")
+
+seuratObj <- RunPCA(seuratObj, 
+                    features = VariableFeatures(object = seuratObj), 
+                    ndims.print = 1:5, nfeatures.print = 10,
+                    assay = "RNA",
+                    reduction.name = "RNA_pca",
+                    reduction.key = "rnaPC_")
+```
+
+## Optimize PCA
+
+```{r}
+
+Elbow <- ElbowPlot(seuratObj, reduction = "RNA_pca", ndims = 40)
+Elbow
+```
+
+```{r}
+
+print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
+
+
+```
+
+##Finding Best Dimension Clustering of cells
+
+```{r}
+# Test more than 14 dimensions (see example script)
+StartingDims <- 10 # Always do Starting Amount of Dims - 1
+EndingDims <- 25
+TotalDims <- EndingDims - StartingDims
+
+print(paste0("Working on Dims Starting form ",StartingDims, " to Dims ", EndingDims ," Total: ",TotalDims))
+
+ListDims <- seq(1:TotalDims+1)
+for(i in ListDims){
+  #Creating Mulitple Cluster Maps with Different Dims
+  StartingDims <- StartingDims + 1
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:StartingDims, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:StartingDims,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  
+  #Title for UMap
+  UMAPTitle <- paste0("UMAP Number = ",StartingDims)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
+  print(UMAPgraph)
+
+}
+
+#Clustering looks different than other VBO samples, there there 2 big groups of cluster instead of one
+```
+
+## Loop For best Resolution of the found dims
+
+```{r}
+
+LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
+
+# Fill in the BEST dims found form the pervious chunck(NOTE: 2 dims=1:? to fill in)!
+for(i in LoopRes){
+  
+  #Creating Mulitple Cluster Maps with Different Resolutions
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = i)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  
+  #Title for UMap
+  UMAPTitle <- paste0("Resolution Number = ",i)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
+  print(UMAPgraph)
+}
+
+#Test Clustree
+  Tree <- clustree(seuratObj, prefix = "RNA_snn_res.")
+Tree
+# Best resolution = 0.8
+
+```
+
+# Best Clustering of cells
+
+```{r}
+#Put the best Dims and Resolution here in this graph 
+seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.8)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  BestCluster <- DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
+  BestCluster
+```
+
+##Finding Cluster Biomarkers
+
+```{r}
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+
+
+ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
+ClusterRNA<-ClusterRNA[order(ClusterRNA$p_val_adj, decreasing = FALSE), ]
+
+ClusterRNA$score<- ClusterRNA$pct.1/(ClusterRNA$pct.2+0.01)*ClusterRNA$avg_log2FC
+head(ClusterRNA)
+
+totalNrClusters<-max(as.numeric(names(table(ClusterRNA$cluster))))
+totalNrClusters <- totalNrClusters+1
+markersList<-list()
+
+for(i in 1:totalNrClusters){
+  clusterNr<-i-1
+  
+  tmp<-ClusterRNA[ClusterRNA$cluster==clusterNr,]
+  tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC
+  
+  markersList[[i]]<-tmp[order(tmp$score, decreasing=TRUE),]
+}
+totalNrClusters <- totalNrClusters-1
+names(markersList)<-paste0("cluster",0:totalNrClusters)
+
+### Write to Excel
+
+write.xlsx(markersList,paste0("SeuratObj_Marker_RNA_",FileName,".xlsx"))
+           
+saveRDS(ClusterRNA, paste0("SeuratObj_Marker_RNA_",FileName))
+
+
+```
+
+## Plotting Biomarkers
+
+```{r}
+
+#FeaturePlot(seuratObj, features = c("Ncr1", "Cacnb3", "Pclaf", "Spc24", "Cd3g", "Cdk1"))
+
+```
+
+#ADT
+
+```{r}
+
+raw.names <- rownames(rawDataADT)
+cells.use  <- intersect(colnames(rawDataADT), colnames(seuratObj))
+ABS.use  <- rownames(rawDataADT)
+rawDataADT <- rawDataADT[ABS.use, cells.use]
+seuratObj[["ADT"]] <- CreateAssayObject(counts = rawDataADT[,colnames(seuratObj)])
+
+#Normalization
+seuratObj <- NormalizeData(seuratObj, assay = "ADT", normalization.method = "CLR", verbose=T)
+
+seuratObj <- FindVariableFeatures(seuratObj,assay="ADT",selection.method = "vst", nfeatures=nrow(rawDataADT))
+
+
+#Dimensenioanly Reduction
+seuratObj <- ScaleData(seuratObj, assay = "ADT")
+
+seuratObj <- RunPCA(seuratObj, 
+                    features = VariableFeatures(object = seuratObj, assay = "ADT"), 
+                    ndims.print = 1:5, nfeatures.print = 10,
+                    assay = "ADT",
+                    reduction.name = "ADT_pca",
+                    reduction.key = "adtPC_")
+# Finding Cluster
+
+StartingDimsADT <- 14 # Always do Starting Amount of Dims - 1
+EndingDimsADT <- 25
+TotalDimsADT <- EndingDimsADT - StartingDimsADT
+
+print(paste0("Working on Dims Starting form ",StartingDimsADT, " to Dims ", EndingDimsADT ," Total: ",TotalDimsADT))
+
+ListDimsADT <- seq(1:TotalDimsADT+1)
+
+for(i in ListDimsADT){
+  #Creating Mulitple Cluster Maps with Different Dims
+  StartingDimsADT <- StartingDimsADT + 1
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:StartingDimsADT, reduction = "ADT_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:StartingDimsADT,reduction = "ADT_pca", reduction.name = "ADT_umap" )
+  
+  #Title for UMap
+  UMAPTitleADT <- paste0("UMAP Number = ",StartingDimsADT)
+  UMAPgraphADT  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitleADT)
+  print(UMAPgraphADT)
+}
+
+
+#LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
+
+# Fill in the BEST dims found form the pervious chunck(NOTE: 2 dims=1:? to fill in)!
+for(i in LoopRes){
+  
+#Creating Mulitple Cluster Maps with Different Resolutions
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "ADT_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = i)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "ADT_pca", reduction.name = "ADT_umap" )
+  
+  #Title for UMap
+  UMAPTitle <- paste0("Resolution Number ADT = ",i)
+  UMAPgraph  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
+ print(UMAPgraph)
+}
+
+#Test Clustree
+#TreeADT <- clustree(seuratObj, prefix = "ADT_snn_res.")
+#TreeADT
+
+#Best Cluster (Change dims)
+seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:25)
+seuratObj <- FindClusters(seuratObj, resolution = 0.5)
+
+
+# UMAP
+seuratObj <- RunUMAP(seuratObj, dims = 1:25, assay = "ADT", reduction = "ADT_pca", reduction.name ="ADT_umap" )
+DimPlot(seuratObj, reduction = "ADT_umap", label = T, repel = T, label.size = 4)
+
+#Finding Markers
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+
+ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
+head(ClusterADT6, n = 6)
+
+saveRDS(ClusterADT6, paste0("SeuratObj_Marker_ADT_",FileName))
+
+write.xlsx(ClusterADT6,paste0("SeuratObj_Marker_ADT_",FileName,".xlsx"))
+
+
+FeaturePlot(seuratObj, features = c("CD24", "CD9", "CD371	", "CD272", "XCR1", "CD29"))
+
+```
+
+#Annotation Cells
+
+```{r}
+
+## readRDS of your sample before
+# sample <- readRDS("/absolute/path/sample.RDS");
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_wrapper.R"); 
+seuratObj <- run_sctype(seurat_object = seuratObj,
+                     assay = "RNA",
+                     scaled = TRUE,
+                     known_tissue_type="Immune system",
+                     # Used Custom Annotation
+                     custom_marker_file="/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx",
+                     name="sctype_classification")
+
+# MARKERS: General CDC
+# MARKERS: CDC1 and 2 , Migetory and Profilatrate
+
+ AnnotClust <- DimPlot(seuratObj, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')    
+ AnnotClust
+```
+
+# After Clustering Filitering (see notes and scripts (general))
+
+```{r}
+# Top Markers per Cluster
+totalNrClusters<-max(as.numeric(names(table(ClusterRNA$cluster))))
+BioMarkerList <- list()
+
+for(i in 1:totalNrClusters){
+  tmp <- ClusterRNA[ClusterRNA$cluster==i,]
+  # Scoring
+  # pct 1 percentage cell in the cluster that express that gene
+  # pct 2 percentage cell in other clusters that express that gene
+  # avg_log2FC is a weight to add to score
+  tmp$score<-tmp$pct.1/(tmp$pct.2+0.001)*tmp$avg_log2FC
+  BioMarkerList[[i]]<-tmp[order(tmp$score, decreasing=TRUE),] #Already sorted by score
+  TopMarkersperCluster <- list(head(BioMarkerList[[i]]$gene))
+  print(paste("Top Markers of Cluster:",i,"=", TopMarkersperCluster))
+}
+
+#tmp$score<-tmp$pct.1/(tmp$pct.2+0.01)*tmp$avg_log2FC?? Score voor biomarkers
+# Sort by Frequencie?
+
+```
+
+## Finding Doublets
+
+```{r}
+# Make Seuratobject a SingleCellExpirment Object
+Doublets <- as.SingleCellExperiment(seuratObj)
+Doublets$seurat_cluster <- seuratObj$seurat_clusters
+
+# Find the Doublets
+Doublets <- scDblFinder(Doublets, clusters="seurat_cluster") 
+
+#Doublets per Cluster
+#dbl <- findDoubletClusters(counts(Doublets), Doublets$seurat_cluster)
+
+# Work within Seuratobject to compare cluster to scDblFinder.class
+
+# Add to the Orginal SeuratObject
+seuratObj$scDblFinder_class <- Doublets$scDblFinder.class
+seuratObj$scDblFinder_score <- Doublets$scDblFinder.score
+
+
+ DoubletsMap <- FeaturePlot(object = seuratObj, features = "scDblFinder_score" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
+DoubletsMap
+
+
+cellsNames <- droplevels(seuratObj$seurat_clusters)
+TrueDoubles <- seuratObj$scDblFinder_class
+
+
+ClusterDoublets <- as.data.frame(
+  table(cellsNames[TrueDoubles == "doublet"])
+)
+# ADD percentage !!!
+AfterscDbl <-table(seuratObj$scDblFinder_class)
+print(paste("After scDblFinder:"))
+AfterscDbl
+ClusterDoublets
+# Remove Created object
+rm(Doublets)
+gc()
+
+```
+
+## Control if Mitochondrian gene Precentage for each gene
+
+```{r}
+seuratObj[["percent.mt"]] <- PercentageFeatureSet(seuratObj, pattern = "^mt-")
+
+MitoMap <- FeaturePlot(object = seuratObj, features = "percent.mt" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
+MitoMap
+
+# Goei Cutoffs for Mito gene Precentage --> 10%?
+# Show on the plot (Aantonen als mit gene geconcentreed zijn)
+```
+
+##Cluster ADT count
+
+```{r}
+
+ ADTMap <- FeaturePlot(object = seuratObj, features = "nFeature_ADT" , cols = c("grey", "blue"),reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7)
+ADTMap
+
+# nCount total ADT per cell
+# nfeature how many different ADT per cell 
+# Use nfeatuere ADT to calculate average ADT per cluster
+# nfeaute let op probleem dat lage cell kwaliteit een hoge count hebben door veel makkelijke bindingen
+
+# FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+#Gebruik nfeauter metafa data in the featureplot to make graph
+
+
+
+# Good Cutoffs also 10%?
+# Ploten on RNA_UMAP and ADT_UMAP
+```
+
+# Add Manual Clustering (Remove the markers out of excel and shown manually) (Automatisch uit excel halen)
+
+```{r}
+AnnotData <- read_xlsx(path = "/Users/samue/Desktop/Stage VIB/CDC Annotatie.xlsx")
+AnnotData
+
+plot_list_FL <- list()
+plot_list_TR <- list()
+
+for (i in 1:nrow(AnnotData)){
+  ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
+  #Have To split it up because FeaturePlot see list of genes as 1 name
+  AnnotTitle <- paste0(AnnotData$cellName[row.names(AnnotData)==i],"  False ORDER")
+  
+  # Featureplot best used for looking per gene
+  print(AnnotTitle)
+  p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7,order = FALSE)
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  plot_list_FL[[i]] <- p_combined
+  
+  print(plot_list_FL[[i]])
+   
+}
+
+for (i in 1:nrow(AnnotData)){
+  ExcelMarker <- unlist(strsplit(AnnotData$geneSymbolmore1[row.names(AnnotData)==i],","))
+  #Have To split it up because FeaturePlot see list of genes as 1 name
+  AnnotTitle <- paste0(AnnotData$cellName[row.names(AnnotData)==i],"  True Order")
+  
+  # Featureplot best used for looking per gene
+  print(AnnotTitle)
+  p <- FeaturePlot(object = seuratObj, features = ExcelMarker, cols = c("grey", "blue"), 
+            reduction = "RNA_umap", min.cutoff = 'q2', max.cutoff = 'q98', pt.size = 0.7,order = TRUE)
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  plot_list_TR[[i]] <- p_combined
+  print(plot_list_TR[[i]])
+   
+  }
+
+ExcelMarker
+# Look for Seurat Function Module to bring all gene togheter in 1 plot
+
+```
+
+# Markdown note for Datasets
+
+SAM2:
+
+Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically. Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type Mito: No obvious problems ADT: No obvious problems
+
+## Saving R object
+
+```{r}
+#Set folder
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+
+# Save Object with everything Before Post-Processing
+saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )
+# Saving Graphs
+pdf(paste0("Graphs_Pre-Process_",FileName), width = 14,
+  height = 10)
+sctplt1 
+sctplt2
+hist1 
+hist2
+vlplt1 + vlplt2
+Elbow
+Tree
+#TreeADT
+BestCluster
+AnnotClust
+DoubletsMap
+MitoMap
+ADTMap
+plot_list_FL
+plot_list_TR
+
+dev.off()
+# Save object with everything after Post- Processing
+# Save Object with only (Mig and resident) CDC 1
+
+```
