@@ -108,11 +108,11 @@ unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "U
 # Checking CDC1
 PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"
 ))
-PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling CDC1")
+PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling if CDC1")
 
 
 PlotUnknown1
-PlotUnknown2
+
 ```
 
 
@@ -123,14 +123,15 @@ nCellsR <-ncol(seuratObjR)
 
 seuratObjVBO <- readRDS("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/VBO-Merge/seuratObj_paper_dietVBO_4-12_2024.rds")
 
-#Subset to only VBO005
+#Subset to only VBO004
 seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$orig.ident==FileName)
+PlotseuratVBO <- DimPlot(seuratObjVBO, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
 
-# This is a WT conditions ---> Want 
+# This is a WT conditions ---> Want to keep All cells 
 # Using seuratVBO we select of our own seuratObjR the Late mature cells
 
-# subset seuratObjVBO to only the Late mature CDC1 cells
-seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$Annotation_paper=="Late mature cDC1s")
+# Comment Out
+#seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$Annotation_paper=="Late mature cDC1s")
 
 
 #Fixing seuratVBO names to match our own seuratobject
@@ -169,6 +170,9 @@ scale_y_continuous(
     breaks = seq(0, 14000, by = 2000)
   )+ggtitle("Before and After Filtering based on VBO_Merge ")
 
+
+PlotseuratVBO
+
 BarplotVBO
 
 
@@ -202,7 +206,7 @@ BarplotVBO
 # Notes
 ```{r}
 
-blurb = paste("\n   Notes for The Post-Processing of VBO005\n",
+blurb = paste("\n   Notes for The Post-Processing of VBO004\n",
          "
   - All doublets removed based on the HTO.data
   - Used VBO_Merge annontation to filter cells

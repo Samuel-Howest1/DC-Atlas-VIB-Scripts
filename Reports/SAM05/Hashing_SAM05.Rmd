@@ -42,13 +42,13 @@ library('RColorBrewer')
 
 ```{r}
 #Load Seurat object
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM016")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
 FileName <- basename(getwd())
 
 seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
 
 # Load HTO Matrix and add to the seuratobject
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM016")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataHTO <- rawData[["Custom"]]
@@ -59,7 +59,7 @@ rawDataHTO <- rawData[["Custom"]]
 #HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
 #rawDataHTO <- rawDataHTO[HTO_Above_0, ]
 
-TargetHTO <- c("Hashtag1","Hashtag2","Hashtag3","Hashtag4","Hashtag5","Hashtag6","Hashtag7","Hashtag8")
+TargetHTO <- c("Hashtag1","Hashtag2","Hashtag3")
 rawDataHTO <- rawDataHTO[TargetHTO,]
 
 seuratObj[["HTO"]] <- CreateAssayObject(counts = rawDataHTO[,colnames(seuratObj)] ,min.cells = 1)
@@ -202,7 +202,7 @@ Multiseq
 ```{r}
 # Vector Needed for graph
 PresentHashingAntibodies<-c("Hashtag1","Hashtag2",
-                            "Hashtag3", "Hashtag5","Hastag6")
+                            "Hashtag3")
 HTOCounts<-as.matrix((rowSums(as.matrix((seuratObj@assays$HTO@counts)))))
 TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
 

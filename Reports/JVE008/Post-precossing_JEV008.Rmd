@@ -60,7 +60,7 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE008")
 FileName <- basename(getwd())
 
 
@@ -77,6 +77,7 @@ seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post process
 
 # Subset: Removing the Negative and Doublets
 # Only HTO.data doublets removed ---> scdblfinder doublets are still in the the seuratObj 
+
 ncol(seuratObj)
 seuratObjR <- subset(seuratObj,seuratObj@meta.data$HTO_GUESS != "Doublet" & seuratObj@meta.data$HTO_GUESS != "Negative")
 ncol(seuratObjR)
@@ -99,6 +100,30 @@ PlotSeuratRClust
 ```
 
 
+## Manual Cluster selection of Whole cluster
+
+Checking the Doublet count of Cluster 12/ Unknown cell type
+Selection
+```{r}
+ClusterData <- seuratObj@meta.data
+UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
+#Color Cluster Number?
+ColorIdent <- 15
+wantedCells<-WhichCells(seuratObjR, idents = ColorIdent)
+PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = wantedCells))/length(WhichCells(seuratObjR,wantedCells)))*100
+PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
+PrecentageDoublet
+ClustRemoveMap4 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
+
+ClustRemoveMap1
+ClustRemoveMap2
+ClustRemoveMap3
+ClustRemoveMap4
+
+
+# Has a Almost no doublets
+```
+
 
 ## Checking Unknow/ Suspicious cells
 ```{r}
@@ -107,65 +132,38 @@ unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "U
 # Making a plot showcasing these genes
 
 # Checking If its is CDC1
-PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
+PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"),order = T)
 PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling if CDC1")
 
-#True order
-PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"),order = T)
-PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling if CDC1, TRUE order")
-
-
 # Checking if its is CDC2
-PlotUnknown3 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Sirpa","S100a4","Cd209a"))
-PlotUnknown3 <- PlotUnknown3 +plot_annotation(title = "Controling if CDC2")
+PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Sirpa","S100a4","Cd209a"))
+PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling if CDC2")
 
 # Cheching if Migratory CDC1 
-PlotUnknown4 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
-PlotUnknown4 <- PlotUnknown4 +plot_annotation(title = "Controling if Migartory CDC1")
+PlotUnknown3 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
+PlotUnknown3 <- PlotUnknown3 +plot_annotation(title = "Controling if Migartory CDC1")
 
 PlotUnknown1
 PlotUnknown2
 PlotUnknown3
-PlotUnknown4
 
-# The Unknown cells are most likely CDC1 based on the True order feature plot and their location and KIJK MARKER DATA
+# When looking at CDC1 in TRUE order, we can conclude that the Unknown cells are most likely CDC1
 ```
-
 
 ## Reasgin cells
 ```{r}
 seuratObjR$sctype_classification[unknown_cells] <- " Dendritic cells 1"
 
 ```
-##Checking the Doublet count of Cluster 12/ Unknown cell type
-Selection
-```{r}
-ClusterData <- seuratObj@meta.data
-UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
-#Color Cluster Number?
-ColorIdent <- 21
-wantedCells<-WhichCells(seuratObjR, idents = ColorIdent)
-PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = wantedCells))/length(WhichCells(seuratObjR,wantedCells)))*100
-PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
-PrecentageDoublet
-ClustRemoveMap2 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
-
-ClustRemoveMap1
-ClustRemoveMap2
-
-# Has a Almost no doublets
-```
-
 
 ## Removing Selecetd cluster or cluster of choice
 
 ```{r}
 # Remove Selected
-# Cluster 12 ---> 75% Doublets and spread out ---> Removed
-# Cluster 21 ---> 95% Doublets
+# Cluster 15,16,19,20 Have Doublets percentage Higher than 80% 
 
 #Remove specific cluster (Change idents to choose which cluster to remove)
- ClusterCellsRemove <- WhichCells(seuratObjR, idents = c(12,21))
+ ClusterCellsRemove <- WhichCells(seuratObjR, idents = c(15,16,19,20))
  seuratObjR <- subset(seuratObjR, cells = ClusterCellsRemove, invert=TRUE)
 
 DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
@@ -195,7 +193,7 @@ DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4
 
 ncol(seuratObjR)
 # Previous mistake in annotation excel ---> need the whitspace for CDC1
-seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 2" | seuratObjR$sctype_classification == "Proliferating DCs")
+seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1" | seuratObjR$sctype_classification == "Proliferating DCs")
 ncol(seuratObjCDC1)
 
 #active idents 
@@ -207,31 +205,7 @@ PlotSeuratCDC1
 ```
 
 
-## Checking Migratory cells
-```{r}
-
-# isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
- 
-# Making a plot showcasing Migratory CDC 1 genes
-PlotUnknown <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
-PlotUnknown <- PlotUnknown +plot_annotation(title = "Zooming on Unknown cluster: Migratory CDC1 Biomarkers")
-
-# Making a plot showcasing Migratory CDC 1 genes
-PlotUnknown2 <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("S100a4","Anxa3","Cdc42ep3","Ccr7"))
-PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Zooming on Unknown cluster: Migratory CDC2 Biomarkers")
-
-PlotUnknown
-PlotUnknown2
-
-
-#The Upper section are Migratory CDC1, which we want to isolate.
-#There is a natural gap between both cell types where we can easily use to accurately separate both cell types
-
-```
-
-
-#Cleaning Up far off cells and removing Migratory CDC2
+#Cleaning Up far off cells
 ```{r}
 selected <- CellSelector(DimPlot(seuratObjCDC1))
 ```
@@ -241,12 +215,6 @@ seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
 
 ```
 
-
-## Reasgin Remaining cells
-```{r}
-seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells 1"
-
-```
 
 ##Annontation Post-Processing of CDC1
 ```{r}
@@ -259,19 +227,13 @@ seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells
 # Notes
 ```{r}
 
-blurb = paste("\n   Notes for The Post-Processing of JVE010.\n",
+blurb = paste("\n   Notes for The Post-Processing of SAM2.\n",
          "
 		- Most Doublets removed when removing HTO.Data
 		
-		- Cluster 12 ---> 75% Doublets and spread out so we dont lose a whole celltype ---> Removed
-		
-		- Cluster 21 ---> 95% Doublets ---> Removed
+		- Cluster 15,16,19 and 20 all had Doublets percentage above 80% ---> Removed
 
-    - Unknown Cells ---> CDC1 True Order Biomarkers ---> Reasigned CDC1
-		
-		- Check Migratory CDC2 Cluster 5
-			- Upper part: Migratory CDC1
-			- Lower Part: Migratory CDC2")
+    - Unknown Cells ---> = CDC1 ---> Reassigned")
 Notes <- ggplot() + 
   annotate("text", x = 4, y = 25, size=4, label = blurb) + 
   theme_void()
@@ -296,11 +258,10 @@ PlotSeuratR
 PostAnnotClust 
 PostAnnotClustR
 ClustRemoveMap1
-ClustRemoveMap2
 PlotUnknown1
 PlotUnknown2
 PlotUnknown3
-PlotUnknown4
+if (exists("PlotUnknown")) {print(PlotUnknown)}
 PlotSeuratCDC1
 PostAnnotClustCDC1
 Notes

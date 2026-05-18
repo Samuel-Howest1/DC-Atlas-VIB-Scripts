@@ -60,7 +60,7 @@ After Basic filtering of data we want to take a closer look at each cluster that
 
 ## Loading the Seurat Object
 ```{r}
-setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM016w")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM05")
 FileName <- basename(getwd())
 
 
@@ -94,37 +94,7 @@ Idents(seuratObjR) <- "seurat_clusters"
 PlotSeuratRClust <- DimPlot(seuratObjR, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
 PlotSeuratRClust
 
-# ALL Doublets are removed
-
 ```
-
-
-
-## Checking Unknow/ Suspicious cells
-```{r}
-# isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == "Unknown")
-# Making a plot showcasing these genes
-
-# Checking If its is CDC1
-PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
-PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling if CDC1")
-
-# Checking if its is CDC2
-PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Sirpa","S100a4","Cd209a"))
-PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling if CDC2")
-
-# Cheching if Migratory CDC1 
-PlotUnknown3 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
-PlotUnknown3 <- PlotUnknown3 +plot_annotation(title = "Controling if Migartory CDC1")
-
-PlotUnknown1
-PlotUnknown2
-PlotUnknown3
-
-# CDC1 Only Irf8 is show to be present in almost all cells. For CDC2 only S100a4 show clearly at on side of the cluster,but at a realetively low count when having a closer looks, For Migratory cells there is barely any CRR7 expersion showing this cluster is likely migratory cells. Additionaly when looking at the pre-processing graphs, no cell type show clear expression in the Unknown cluster and the ADT count is low in the cluster compared to the rest of Umap. Most likely this these cells are low quality with no clear celltype, 
-```
-
 
 ## Manual Cluster selection of Whole cluster
 
@@ -134,28 +104,77 @@ Selection
 ClusterData <- seuratObj@meta.data
 UMAPTable <-as.data.frame(seuratObj[['RNA_umap']]@cell.embeddings, stringsAsFactors = F)
 #Color Cluster Number?
-ColorIdent <- 12
+ColorIdent <- 18
 wantedCells<-WhichCells(seuratObjR, idents = ColorIdent)
 PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = wantedCells))/length(WhichCells(seuratObjR,wantedCells)))*100
 PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
 PrecentageDoublet
-ClustRemoveMap1 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
-ClustRemoveMap1
+ClustRemoveMap2 <- colorSomeCells(ClusterData, UMAPTable, wantedCells)+ggtitle(paste0("Cluster ",ColorIdent, " = ",PrecentageDoublet," Doublets"))
 
-# Has a Almost no doublets
+ClustRemoveMap1
+ClustRemoveMap2
+
 ```
+
+## Checking Unknow/ Suspicious cells
+```{r}
+# isolate Unknown cells
+unknown_cells <- WhichCells(seuratObjR, expression = sctype_classification == " Basophil cell")
+# Making a plot showcasing these genes
+
+
+# Checking If its is Basophill Cells
+PlotUnknown1 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Mcpt8","Fcer1a","Fcer1g","adt_CD49b"))
+PlotUnknown1 <- PlotUnknown1 +plot_annotation(title = "Controling if Basophil cell")
+
+# Chech if CDC1
+PlotUnknown2 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Xcr1","Irf8"))
+PlotUnknown2 <- PlotUnknown2 +plot_annotation(title = "Controling if CDC1")
+
+# Checking if its is CDC2
+PlotUnknown3 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Sirpa","S100a4","Cd209a"))
+PlotUnknown3 <- PlotUnknown3 +plot_annotation(title = "Controling if CDC2")
+
+# Checking if Migratory CDC1 
+PlotUnknown4 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7"))
+PlotUnknown4 <- PlotUnknown4 +plot_annotation(title = "Controling if Migartory CDC1")
+
+# Checking if Plasmacytoid dendritic cells
+PlotUnknown5 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Siglech","Tcf4","Ccr9","Bst2"))
+PlotUnknown5 <- PlotUnknown5 +plot_annotation(title = "Controling if Plasmacytoid dendritic cells")
+
+# Checking if Plasmacytoid dendritic cells
+PlotUnknown6 <- FeaturePlot(subset(seuratObjR, cells = unknown_cells),features = c("Mki67","Stmn1"))
+PlotUnknown6 <- PlotUnknown6 +plot_annotation(title = "Controling if Proliferating DCs")
+
+
+PlotUnknown1
+PlotUnknown2
+PlotUnknown3
+PlotUnknown4
+PlotUnknown5
+PlotUnknown6
+
+#  Basophill are in are unexpected position when clustering, When checked the appear to not be Basophills. When checked for other cell types no conclusif answer was found. Going Further I looked at the MARKER_RNA data of SAM05 and found for the cluster of Basophill no clear cell type thus these cell will be REMOVED. 
+```
+
 
 
 ## Removing Selecetd cluster or cluster of choice
 
 ```{r}
 # Remove Selected
-# Cluster 12 has a low quality and is thus removed
+# Cluster 15 and 18 100% doublets ---> Removed
+#Basophill cells ---> 
 
 #Remove specific cluster (Change idents to choose which cluster to remove)
- ClusterCellsRemove <- WhichCells(seuratObjR, idents = 12)
+ ClusterCellsRemove <- WhichCells(seuratObjR, idents = c(15,18))
  seuratObjR <- subset(seuratObjR, cells = ClusterCellsRemove, invert=TRUE)
 
+# Remove cells that can't be identified
+  ClusterCellsRemove <- WhichCells(seuratObjR, expression = sctype_classification == " Basophil cell")
+ seuratObjR <- subset(seuratObjR, cells = ClusterCellsRemove, invert=TRUE)
+ 
 DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 
 ```
@@ -183,7 +202,7 @@ DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4
 
 ncol(seuratObjR)
 # Previous mistake in annotation excel ---> need the whitspace for CDC1
-seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 2" | seuratObjR$sctype_classification == "Proliferating DCs")
+seuratObjCDC1 <- subset(seuratObjR, seuratObjR$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1" | seuratObjR$sctype_classification == "Proliferating DCs")
 ncol(seuratObjCDC1)
 
 #active idents 
@@ -195,30 +214,6 @@ PlotSeuratCDC1
 ```
 
 
-## Checking Migratory cells
-```{r}
-
-# isolate Unknown cells
-unknown_cells <- WhichCells(seuratObjCDC1, expression = sctype_classification == "Migratory dendritic cells 2")
- 
-# Making a plot showcasing these genes
-PlotUnknown <- FeaturePlot(subset(seuratObjCDC1, cells = unknown_cells),features = c("Cd81","Gcsam","Laptm4b","Ncoa7","Ccr7
-"))
-
-PlotUnknown <- PlotUnknown +plot_annotation(title = "Zooming on Unknown cluster: CDC1 Biomarkers")
-
-PlotUnknown
-
-#The lower section are Migratory CDC1, which we want to isolate. 
-
-```
-
-## Reasgin cells
-```{r}
-selected <- CellSelector(DimPlot(seuratObjCDC1))
-seuratObjCDC1$sctype_classification[selected] <- "Migratory dendritic cells 1"
-
-```
 #Cleaning Up far off cells and removing Migratory CDC2
 ```{r}
 selected <- CellSelector(DimPlot(seuratObjCDC1))
@@ -241,15 +236,16 @@ seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
 # Notes
 ```{r}
 
-blurb = paste("\n   Notes for The Post-Processing of SAM2.\n",
+blurb = paste("\n   Notes for The Post-Processing of SAM05.\n",
          "
-		- Almost All Doublets removed when removing HTO.Data
-
-    - Unknown Cells ---> Low quality ---> Removed
+		- Most Doublets removed when removing HTO.Data
 		
-		- Check Migratory CDC2 Cluster 11
-			- Lower part: Migratory CDC1
-			- Upper Part: Migratory CDC2")
+		- Cluster 15 ---> 100% Doublets ---> Removed
+		
+		- Cluster 18 ---> 100% Doublets ----> Removed
+		
+		- Basophill cells ---> Coudn't be identified ---> Removed
+")
 Notes <- ggplot() + 
   annotate("text", x = 4, y = 25, size=4, label = blurb) + 
   theme_void()
@@ -274,9 +270,13 @@ PlotSeuratR
 PostAnnotClust 
 PostAnnotClustR
 ClustRemoveMap1
+ClustRemoveMap2
 PlotUnknown1
 PlotUnknown2
 PlotUnknown3
+PlotUnknown4
+PlotUnknown5
+PlotUnknown6
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PlotSeuratCDC1
 PostAnnotClustCDC1

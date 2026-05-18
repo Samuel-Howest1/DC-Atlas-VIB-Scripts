@@ -42,18 +42,16 @@ library('RColorBrewer')
 
 ```{r}
 #Load Seurat object
-setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM06")
 FileName <- basename(getwd())
 
 seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/SeuratObj_Pre-Process_",FileName))
 
 # Load HTO Matrix and add to the seuratobject
-setwd("/Users/samue/Desktop/Stage VIB/RawData/JVE010")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM06")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
-
-#Hashing Data not in Custom
-rawDataHTO <- rawData[["Antibody Capture"]]
+rawDataHTO <- rawData[["Custom"]]
 
 #Cellsmin1Hash <- intersect(colnames(rawDataHTO), colnames(seuratObj))
 #rawDataHTO <- rawDataHTO[,Cellsmin1Hash]
@@ -61,7 +59,7 @@ rawDataHTO <- rawData[["Antibody Capture"]]
 #HTO_Above_0 <- rownames(rawDataHTO)[Matrix::rowSums(rawDataHTO > 0) > 0]
 #rawDataHTO <- rawDataHTO[HTO_Above_0, ]
 
-TargetHTO <- c("Hashtag7","Hashtag8","Hashtag9","Hashtag10")
+TargetHTO <- c("Hashtag1","Hashtag2","Hashtag3")
 rawDataHTO <- rawDataHTO[TargetHTO,]
 
 seuratObj[["HTO"]] <- CreateAssayObject(counts = rawDataHTO[,colnames(seuratObj)] ,min.cells = 1)
@@ -203,8 +201,7 @@ Multiseq
 
 ```{r}
 # Vector Needed for graph
-# Change Default assay for bug fix
-PresentHashingAntibodies<-c("Hashtag7","Hashtag8","Hashtag9","Hashtag10")
+PresentHashingAntibodies<-c("Hashtag1","Hashtag2","Hashtag3")
 HTOCounts<-as.matrix((rowSums(as.matrix((seuratObj@assays$HTO@counts)))))
 TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
 
@@ -216,7 +213,7 @@ TrueDetectedAbs<-intersect(PresentHashingAntibodies, rownames(HTOCounts))
 # FeaturePlot(seuratObj, features="Hashtag2", pt.size=0.10,label.size = 8,order=T)
 
 # SAM05 geen Hastag6 in feature plot
-HastagPlots <- FeaturePlot(seuratObj, features=(TrueDetectedAbs),ncol=2, pt.size=0.1, label.size = 8,order=T,assay = "ADT")
+HastagPlots <- FeaturePlot(seuratObj, features=(TrueDetectedAbs),ncol=2, pt.size=0.1, label.size = 8,order=T)
 
 
 HastagPlots2 <- DimPlot(seuratObj,group.by = "MULTI_ID", label = F, pt.size = 0.1) + ggtitle("MULTIseqDemux")
