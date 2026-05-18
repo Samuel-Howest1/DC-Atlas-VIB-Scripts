@@ -225,7 +225,7 @@ seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
 
 ##Annontation Post-Processing of CDC1
 ```{r}
-
+# Migratory CDC1 still contain Migratory CDC2 but though to split apart
  PostAnnotClustCDC1 <- DimPlot(seuratObjCDC1, reduction = "RNA_umap", label = TRUE, repel = TRUE, group.by = 'sctype_classification')+ggtitle("CDC Final result")
  PostAnnotClustCDC1
 

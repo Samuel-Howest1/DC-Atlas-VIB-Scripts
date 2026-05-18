@@ -165,7 +165,7 @@ PlotUnknown6
 ```{r}
 # Remove Selected
 # Cluster 15 and 18 100% doublets ---> Removed
-#Basophill cells ---> 
+#Basophill cells ---> Removed
 
 #Remove specific cluster (Change idents to choose which cluster to remove)
  ClusterCellsRemove <- WhichCells(seuratObjR, idents = c(15,18))

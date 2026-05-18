@@ -128,7 +128,7 @@ PlotUnknown2
 PlotUnknown3
 PlotUnknown4
 
-# The Unknown cells are most likely CDC1 based on the True order feature plot and their location and KIJK MARKER DATA
+# The Unknown cells are most likely CDC1 based on the True order feature plot and their location and
 ```
 
 

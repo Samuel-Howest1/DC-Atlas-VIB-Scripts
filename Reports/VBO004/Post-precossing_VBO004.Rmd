@@ -235,7 +235,6 @@ PlotSeuratR
 PostAnnotClust 
 PostAnnotClustR
 PlotUnknown1
-PlotUnknown2
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PostAnnotClustVBO
 Notes
