@@ -128,6 +128,7 @@ seuratObjVBO <- readRDS("/Users/samue/Desktop/Stage VIB/Pre and Post processing 
 
 #Subset to only VBO005
 seuratObjVBO <- subset(seuratObjVBO,seuratObjVBO@meta.data$orig.ident==FileName)
+PlotseuratVBO <- DimPlot(seuratObjVBO, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
 
 # This is a eLNPS_8h conditions ---> Want only mature cells
 # Using seuratVBO we select of our own seuratObjR the Late mature cells
@@ -174,6 +175,7 @@ scale_y_continuous(
 
 BarplotVBO
 
+PlotseuratVBO
 
 ```
 

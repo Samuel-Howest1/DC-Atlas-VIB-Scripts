@@ -69,43 +69,19 @@ seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post process
 # For the rest of the datasets
 #seuratObj <- readRDS(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Hashing/SeuratObj_HTO_",FileName,".rds"))
 
-
+seuratObjR <- seuratObj
 
 ```
 
 
-##Making Subsets of the data
+##Vizualization of the data
 ```{r}
-
-# Subset: Removing the Negative and Doublets
-# Only HTO.data doublets removed ---> scdblfinder doublets are still in the the seuratObj 
-ncol(seuratObj)
-seuratObjR <- subset(seuratObj,seuratObj@meta.data$HTO_GUESS != "Doublet" & seuratObj@meta.data$HTO_GUESS != "Negative")
-ncol(seuratObjR)
 
 PlotSeurat <- DimPlot(seuratObj, label=T, repel=T )+ggtitle(paste0("Graph ",FileName," Clusters"))
-PlotSeuratR <- DimPlot(seuratObjR, label=T, repel=T)+ggtitle(paste0("Graph",FileName,""))
 
 PlotSeurat
-PlotSeuratR 
 
 ```
-
-
-
-## Manual Cluster selection of part of a cluster
-```{r}
-
-selected <- CellSelector(DimPlot(seuratObjR))
-
-PrecentageDoublet <- (length(WhichCells(seuratObjR, expression = scDblFinder_class=="doublet", cells = selected))/length(WhichCells(seuratObjR, selected)))*100
-PrecentageDoublet <- paste0(round(PrecentageDoublet,2),"%")
-
-PrecentageDoublet
-
-```
-
-
 
 
 ## Manual Cluster selection of Whole cluster
@@ -154,22 +130,6 @@ PlotUnknown8
 ```
 
 
-## Adding A cluster
-```{r}
-#Make number for new cluster
-totalNrClusters <- max(as.numeric(as.character(Idents(seuratObj))))
-NewNrClusters <- totalNrClusters + 1
-# Put orignal cluster assigments of cells
-seuratObj$seurat_selected_clusters <- as.character(seuratObj$seurat_clusters)
-seuratObj$seurat_selected_clusters[selected] <- as.character(NewNrClusters)
-# 2DE CLUSTER VERWIJDERT DE EERST LET OP!!!!!!!!!!!!!!!!!!!!!!!
-seuratObj$seurat_selected_clusters <- factor(seuratObj$seurat_selected_clusters)
-#Activate the new selected clusters
-Idents(seuratObj) <- seuratObj$seurat_selected_clusters
-DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
-
-
-```
 
 ## Removing Selecetd cluster or cluster of choice
 
@@ -178,7 +138,7 @@ DimPlot(seuratObj, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
 seuratObjR <- subset(seuratObjR, cells = selected, invert=TRUE)
 
 #Remove specific cluster (Change idents to choose which cluster to remove)
- ClusterCellsRemove <- WhichCells(seuratObjR, idents = 24)
+ ClusterCellsRemove <- WhichCells(seuratObjR, idents =c(16,24))
  seuratObjR <- subset(seuratObjR, cells = ClusterCellsRemove, invert=TRUE)
 
 DimPlot(seuratObjR, reduction = "RNA_umap", label = T, repel = T, label.size = 4)
@@ -260,7 +220,33 @@ seuratObjCDC1$sctype_classification[unknown_cells] <- "Migratory dendritic cells
  PostAnnotClustCDC1
 
 ```
+
+# Final count of CDC1
+```{r}
+nCellsSeurat <- ncol(seuratObj)
+nCellsCDC1 <- ncol(seuratObjCDC1)
+PlotCD1 <- data.frame(
+  ObjectName= c("Seuratobj cell count" ,"Final seuratObjCDC1 cell count"),
+  Cells = c(nCellsSeurat,nCellsCDC1)
+)
+
+BarplotCDC1 <- ggbarplot(
+  PlotVBO,
+  x = "ObjectName",
+  y = "Cells",
+  label = TRUE,
+  fill = "ObjectName",
+  palette = c("steelblue", "tomato"),
+)+
+scale_y_continuous(
+    breaks = seq(0, 14000, by = 2000)
+  )+ggtitle("Remainig CDC1 cell count after post-processing")
+
+BarplotCDC1
+
+```
  
+
 ## Notes
 ```{r}
 
@@ -316,6 +302,7 @@ PlotUnknown8
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PlotSeuratCDC1
 PostAnnotClustCDC1
+BarplotCDC1
 Notes
 dev.off()
 

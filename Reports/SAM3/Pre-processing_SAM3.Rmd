@@ -5,8 +5,15 @@ output:
   html_document: default
 ---
 
+``` r
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
 
-Pre-processing of CITE-seq data This Script is the first and will be used to pre-process VBO008 Provided data
+Pre-processing of CITE-seq data This Script is the first and will be used to pre-process SAM2 Provided data
 
 ```{r}
 
@@ -15,6 +22,7 @@ Pre-processing of CITE-seq data This Script is the first and will be used to pre
 ###############################################
 
 library("renv")
+#library("clustree")
 library("tidyverse")
 library("Seurat")
 library("SingleCellExperiment")
@@ -42,7 +50,7 @@ library("openxlsx")
 #############################################
 #RNA
 ############################################
-setwd("/Users/samue/Desktop/Stage VIB/RawData/VBO008")
+setwd("/Users/samue/Desktop/Stage VIB/RawData/SAM3")
 FileName <- basename(getwd())
 rawData <- Read10X("filtered_feature_bc_matrix")
 rawDataRNA <- rawData[["Gene Expression"]]
@@ -323,7 +331,7 @@ seuratObj <- RunPCA(seuratObj,
 
 ```{r}
 
-Elbow <- ElbowPlot(seuratObj, reduction = "RNA_pca", ndims = 40)
+Elbow <- ElbowPlot(seuratObj, reduction = "RNA_pca")
 Elbow
 ```
 
@@ -338,8 +346,8 @@ print(seuratObj[["RNA_pca"]], dims = 1:5, nfeatures = 5)
 
 ```{r}
 # Test more than 14 dimensions (see example script)
-StartingDims <- 10 # Always do Starting Amount of Dims - 1
-EndingDims <- 25
+StartingDims <- 4 # Always do Starting Amount of Dims - 1
+EndingDims <- 14
 TotalDims <- EndingDims - StartingDims
 
 print(paste0("Working on Dims Starting form ",StartingDims, " to Dims ", EndingDims ," Total: ",TotalDims))
@@ -359,7 +367,8 @@ for(i in ListDims){
 
 }
 
-#Clustering looks different than other VBO samples, there there 2 big groups of cluster instead of one
+
+
 ```
 
 ## Loop For best Resolution of the found dims
@@ -372,9 +381,9 @@ LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
 for(i in LoopRes){
   
   #Creating Mulitple Cluster Maps with Different Resolutions
-  seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "RNA_pca")
+  seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
   seuratObj <- FindClusters(seuratObj, resolution = i)
-  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   
   #Title for UMap
   UMAPTitle <- paste0("Resolution Number = ",i)
@@ -385,7 +394,7 @@ for(i in LoopRes){
 #Test Clustree
   Tree <- clustree(seuratObj, prefix = "RNA_snn_res.")
 Tree
-# Best resolution = 0.8
+# Best Resolution for SAM3 =0.6
 
 ```
 
@@ -393,9 +402,9 @@ Tree
 
 ```{r}
 #Put the best Dims and Resolution here in this graph 
-seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "RNA_pca")
-  seuratObj <- FindClusters(seuratObj, resolution = 0.8)
-  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "RNA_pca", reduction.name = "RNA_umap" )
+seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "RNA_pca")
+  seuratObj <- FindClusters(seuratObj, resolution = 0.6)
+  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "RNA_pca", reduction.name = "RNA_umap" )
   BestCluster <- DimPlot(seuratObj, reduction = "RNA_umap",label = T, repel = T, label.size = 4)
   BestCluster
 ```
@@ -403,7 +412,7 @@ seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "RNA_pca")
 ##Finding Cluster Biomarkers
 
 ```{r}
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 
 ClusterRNA <- FindAllMarkers(seuratObj, only.pos = TRUE, test.use="wilcox") #use test.use="wilcox" to use presto
@@ -471,8 +480,8 @@ seuratObj <- RunPCA(seuratObj,
                     reduction.key = "adtPC_")
 # Finding Cluster
 
-StartingDimsADT <- 14 # Always do Starting Amount of Dims - 1
-EndingDimsADT <- 25
+StartingDimsADT <- 4 # Always do Starting Amount of Dims - 1
+EndingDimsADT <- 14
 TotalDimsADT <- EndingDimsADT - StartingDimsADT
 
 print(paste0("Working on Dims Starting form ",StartingDimsADT, " to Dims ", EndingDimsADT ," Total: ",TotalDimsADT))
@@ -496,34 +505,34 @@ for(i in ListDimsADT){
 #LoopRes <- seq(0.5,1.5,0.1) # Always do Starting Amount of Dims - 1
 
 # Fill in the BEST dims found form the pervious chunck(NOTE: 2 dims=1:? to fill in)!
-for(i in LoopRes){
+#for(i in LoopRes){
   
 #Creating Mulitple Cluster Maps with Different Resolutions
-  seuratObj <- FindNeighbors(seuratObj, dims = 1:25, reduction = "ADT_pca")
-  seuratObj <- FindClusters(seuratObj, resolution = i)
-  seuratObj <- RunUMAP(seuratObj, dims = 1:25,reduction = "ADT_pca", reduction.name = "ADT_umap" )
+ # seuratObj <- FindNeighbors(seuratObj, dims = 1:14, reduction = "ADT_pca")
+#  seuratObj <- FindClusters(seuratObj, resolution = i)
+#  seuratObj <- RunUMAP(seuratObj, dims = 1:14,reduction = "ADT_pca", reduction.name = "ADT_umap" )
   
   #Title for UMap
-  UMAPTitle <- paste0("Resolution Number ADT = ",i)
-  UMAPgraph  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
- print(UMAPgraph)
-}
+#  UMAPTitle <- paste0("Resolution Number ADT = ",i)
+#  UMAPgraph  <-DimPlot(seuratObj, reduction = "ADT_umap",label = T, repel = T, label.size = 4)+ggtitle(UMAPTitle)
+ # print(UMAPgraph)
+#}
 
 #Test Clustree
-#TreeADT <- clustree(seuratObj, prefix = "ADT_snn_res.")
+ # TreeADT <- clustree(seuratObj, prefix = "ADT_snn_res.")
 #TreeADT
 
 #Best Cluster (Change dims)
-seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:25)
+seuratObj <- FindNeighbors(seuratObj, reduction = "ADT_pca",dims = 1:14)
 seuratObj <- FindClusters(seuratObj, resolution = 0.5)
 
 
 # UMAP
-seuratObj <- RunUMAP(seuratObj, dims = 1:25, assay = "ADT", reduction = "ADT_pca", reduction.name ="ADT_umap" )
+seuratObj <- RunUMAP(seuratObj, dims = 1:14, assay = "ADT", reduction = "ADT_pca", reduction.name ="ADT_umap" )
 DimPlot(seuratObj, reduction = "ADT_umap", label = T, repel = T, label.size = 4)
 
 #Finding Markers
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 ClusterADT6 <- FindAllMarkers(seuratObj, only.pos = TRUE, assay = "ADT")
 head(ClusterADT6, n = 6)
@@ -704,17 +713,12 @@ ExcelMarker
 
 ```
 
-# Markdown note for Datasets
-
-SAM2:
-
-Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically. Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type Mito: No obvious problems ADT: No obvious problems
 
 ## Saving R object
 
 ```{r}
 #Set folder
-setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/",FileName,"/Pre-process/"))
+setwd(paste0("/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/Pre-process/",FileName))
 
 # Save Object with everything Before Post-Processing
 saveRDS(seuratObj,paste0("SeuratObj_Pre-Process_",FileName) )

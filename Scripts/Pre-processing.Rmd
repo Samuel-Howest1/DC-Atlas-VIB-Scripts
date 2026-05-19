@@ -22,7 +22,6 @@ Pre-processing of CITE-seq data This Script is the first and will be used to pre
 ###############################################
 
 library("renv")
-#library("clustree")
 library("tidyverse")
 library("Seurat")
 library("SingleCellExperiment")

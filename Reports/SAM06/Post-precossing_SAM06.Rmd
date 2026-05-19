@@ -230,7 +230,33 @@ seuratObjCDC1 <- subset(seuratObjCDC1, cells = selected, invert=TRUE)
  PostAnnotClustCDC1
 
 ```
+
+# Final count of CDC1
+```{r}
+nCellsSeurat <- ncol(seuratObj)
+nCellsCDC1 <- ncol(seuratObjCDC1)
+PlotCD1 <- data.frame(
+  ObjectName= c("Seuratobj cell count" ,"Final seuratObjCDC1 cell count"),
+  Cells = c(nCellsSeurat,nCellsCDC1)
+)
+
+BarplotCDC1 <- ggbarplot(
+  PlotVBO,
+  x = "ObjectName",
+  y = "Cells",
+  label = TRUE,
+  fill = "ObjectName",
+  palette = c("steelblue", "tomato"),
+)+
+scale_y_continuous(
+    breaks = seq(0, 14000, by = 2000)
+  )+ggtitle("Remainig CDC1 cell count after post-processing")
+
+BarplotCDC1
+
+```
  
+
 # Notes
 ```{r}
 
@@ -274,6 +300,7 @@ PlotUnknown6
 if (exists("PlotUnknown")) {print(PlotUnknown)}
 PlotSeuratCDC1
 PostAnnotClustCDC1
+BarplotCDC1
 Notes
 dev.off()
 
