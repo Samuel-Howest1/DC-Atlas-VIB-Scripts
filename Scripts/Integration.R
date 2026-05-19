@@ -8,12 +8,12 @@ library("renv")
 library("Seurat")
 library("patchwork")
 library("harmony")
-library("presto") 
+#library("presto") 
 
 # Load Seuratobjects
 
 ## Automaticaly gain list of every Dataset
-folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
+folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 DataList <- DataList[-8] 
@@ -24,19 +24,23 @@ for (i in DataList){
   #Starting seuratobject
   if (start == 1){
     seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    seuratObjT <- seuratObjT[,1:100]
+#    seuratObjT <- seuratObjT
     start <- start + 1
     colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
+    seuratObjT$orig.ident <- i
   }
   
   else{
   tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-  tmp <- tmp[,1:100] 
+#  tmp <- tmp[,1:500] 
+  tmp$orig.ident <- i
   colnames(tmp)<- paste0(colnames(tmp),"_",i)
   seuratObjT <- merge(seuratObjT,tmp)
   }
 }
 
+#Split by ?? for integration later
+#
 
 # Perform a post-processing on these once more
 
@@ -56,14 +60,38 @@ seuratObjT <- RunPCA(seuratObjT,
                     reduction.key = "rnaPC_")
 # clustering 
 seuratObjT <- FindNeighbors(seuratObjT, dims = 1:25, reduction = "RNA_pca")
-seuratObjT <- FindClusters(seuratObjT, resolution = 0.5)
+
+#Starting with high resolution to separate contamination
+seuratObjT <- FindClusters(seuratObjT, resolution = 1)
 seuratObjT <- RunUMAP(seuratObjT, dims = 1:25,reduction = "RNA_pca", reduction.name = "RNA_umap" )
 DimPlot(seuratObjT,label = T)
+DimPlot(seuratObjT,label = T,group.by = "sctype_classification")
+DimPlot(seuratObjT,label = T,group.by = "HTO_GUESS")
+DimPlot(seuratObjT,label = T,group.by = "scDblFinder_class")
+
+
+#Biomarkers <- FindAllMarkers(seuratObjT, only.pos = TRUE, test.use="wilcox")
+
+
+
+
 
 
 
 # seuratObjT for integration
 
+seuratObjTCCA <- IntegrateLayers(object = seuratObjT,
+                                 method = CCAIntegration,
+                                 orig.reduction = "RNA_pca",
+                                 new.reduction = "integrated.cca",
+                                 verbose = FALSE)
+
+seuratObjTCCA[["RNA"]] <- JoinLayers(seuratObjTCCA[["RNA"]])
+
+seuratObjTCCA <- FindNeighbors(seuratObjTCCA, reduction = "integrated.cca", dims = 1:30)
+seuratObjTCCA <- FindClusters(seuratObjTCCA, resolution = 1)
+seuratObjTCCA <- RunUMAP(seuratObjTCCA, dims = 1:30, reduction = "integrated.cca")
+DimPlot(seuratObjTCCA, reduction = "umap")
 # Planning? 
 
 # Load all SeuratObjCDC1 or SeuratObjR into 1 Seuratobject
@@ -74,17 +102,6 @@ DimPlot(seuratObjT,label = T)
 
 #Intergration
 
-## Intergration layer
-seuratObjT <- IntegrateLayers(object = seuratObjT,
-                              method = CCAIntegration,
-                              orig.reduction = "pca",
-                              new.reduction = "integrated.cca") # scvi
 
-seuratObjT[["RNA"]] <- JoinLayers(seuratObjT[["RNA"]])
-
-## Clustering
-seuratObjT <- FindNeighbors(seuratObjT, reduction = "integrated.cca", dims = 1:30)
-seuratObjT <- FindClusters(seuratObjT, resolution = 1)
-seuratObjT <- RunUMAP(seuratObjT, dims = 1:30, reduction = "integrated.cca")
 
 
