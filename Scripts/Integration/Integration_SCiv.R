@@ -1,9 +1,18 @@
 
 
 
-library(reticulate)
+library("renv")
+library("Seurat")
+library("patchwork")
+library("harmony")
+library("readxl")
+library("presto")
+library("SeuratIntegrate")
+library("reticulate")
+
 #install_miniconda()
 conda_list()
+
 
 use_condaenv("Integration", required = TRUE)
 
