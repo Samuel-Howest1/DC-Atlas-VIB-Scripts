@@ -108,31 +108,56 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 
-seuratObjT <- IntegrateLayers(object = seuratObjT,
-                              method = HarmonyIntegration,
-                              orig.reduction = "RNA_pca_int",
-                              new.reduction = "harmony",
-                              theta = ,
-                              verbose = TRUE
-)
-
 
 bench::mark(
 seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
                          plot_convergence =TRUE, 
                          reduction.use ="RNA_pca_int", 
-                         theta=2, 
+                         theta=2,
+                         sigma=0.2,
+                         lambda=0.8,
                          verbose=TRUE)
 )
+# Reduce max.itration?
+# Specific number of cluster?
 
-seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
+
+
+seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "integrated.cca",dims = 1:40)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40)
 
 DimPlot(seuratObjT,label = T,reduction = "harmony",group.by = "seurat_clusters")
 
-# Reduce max.itration?
-# Specific number of cluster?
+                           
+#######################################################################""
+#SCORING
+
+# KBET Scoring Measuring that cell have a blanced mixed of Batches
+
+KbetScore <- ScoreKBET(seuratObjT,
+                       batch.var = "orig.ident",
+                       cell.var = "sctype_classification",
+                       what = "integrated.cca")
+
+#LISI Scoring 
+## LISIe Scoring cell Mixing
+LisiScore <- ScoreLISI(seuratObjT,integration = "integrated.cca",
+                       reduction = "RNA_pca_int",
+                       cell.var = "sctype_classification") # Niet ideaal
+AverageLisi <- mean(LisiScore$sctype_classification)
+quantile(LisiScore$sctype_classification)
+breaks <- seq(0, 1, by = 0.2)
+counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
+## LISIi Batch mixing
+
+# AWS
+ASWScore  <- ScoreASW(seuratObjT,
+                      what = "integrated.cca",
+                      cell.var = "sctype_classification",
+                      verbose = TRUE,)
+
+
 
 # Scoring
 LisiScore <- ScoreLISI(seuratObjT,integration = "integrated.cca",reduction = "RNA_pca_int",cell.var = "sctype_classification")
