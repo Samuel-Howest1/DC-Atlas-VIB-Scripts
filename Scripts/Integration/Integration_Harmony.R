@@ -10,7 +10,7 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
-library()
+library("bench")
 
 ####################################################################
 folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
@@ -116,17 +116,14 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               verbose = TRUE
 )
 
-seuratObjT <- IntegrateLayers(object = seuratObjT,
-                                 method = CCAIntegration,
-                                 orig.reduction = "RNA_pca_int",
-                                 new.reduction = "integrated.cca",
-                                 verbose = TRUE)
 
-#seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
-#                         plot_convergence =TRUE, 
-#                         reduction.use ="RNA_pca_int", 
-#                         theta=2, 
-#                         verbose=TRUE)
+bench::mark(
+seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
+                         plot_convergence =TRUE, 
+                         reduction.use ="RNA_pca_int", 
+                         theta=2, 
+                         verbose=TRUE)
+)
 
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
