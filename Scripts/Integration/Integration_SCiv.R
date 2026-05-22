@@ -9,21 +9,99 @@ library("readxl")
 library("presto")
 library("SeuratIntegrate")
 library("reticulate")
-
-#install_miniconda()
+library("sceasy")
+install_miniconda()
 conda_list()
 
 conda_create("Integration", python_version = "3.11")
 
 conda_install(
-  envname = "scvi",
+  envname = "Integration",
   packages = c("scvi-tools"),
   pip = TRUE
 )
 
 use_condaenv("Integration", required = TRUE)
 
-py_config()
+sc <- import("scanpy", convert = FALSE)
+scvi <- import("scvi", convert = FALSE)
+
+
+####################################################################
+folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
+DataList <- list.files(folder)
+# Removing VBO_merge out of DataList/ comment out if not neede
+DataList <- DataList[-8]
+
+#Test Only JVE
+DataList <- DataList[1:2]
+start <- 1
+#Only CDC1
+for (i in DataList){
+  print(i)
+  #Starting seuratobject
+  if (start == 1){
+    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+    #    seuratObjT <- seuratObjT
+    start <- start + 1
+    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
+    seuratObjT$orig.ident <- i
+  }
+  
+  else{
+    tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+    #  tmp <- tmp[,1:500] 
+    tmp$orig.ident <- i
+    colnames(tmp)<- paste0(colnames(tmp),"_",i)
+    seuratObjT <- merge(seuratObjT,tmp)
+  }
+}
+
+rm(tmp)
+gc()
+#################################################################
+# Adding Metadata
+experiment_map <- c(
+  "SAM2" = "CITEseq_Test",
+  "SAM3" = "CITEseq_Test",
+  "SAM05" = "CITEseq_Final",
+  "SAM06" = "CITEseq_Final",
+  "SAM016" = "CITEseq_Notch",
+  "VBO004" = "CITEseq_LNP",
+  "VBO005" = "CITEseq_LNP",
+  "VBO006" = "CITEseq_LNP",
+  "VBO007" = "CITEseq_LNP",
+  "VBO008" = "CITEseq_LNP",
+  "VBO009" = "CITEseq_LNP",
+  "VBO010" = "CITEseq_LNP",
+  "VBO011" = "CITEseq_LNP",
+  "VBO012" = "CITEseq_LNP",
+  "JVE008" = "CITEseq_Toxo",
+  "JVE010" = "CITEseq_Toxo"
+)
+seuratObjT$experiment <- unname(experiment_map[seuratObjT$orig.ident])
+WT_map <- c(
+  "SAM2" = "CITEseq_Test",
+  "SAM3" = "CITEseq_Test",
+  "SAM05" = "WT",
+  "SAM06" = "Test",
+  "SAM016" = "WT",
+  "VBO004" = "WT",
+  "VBO005" = "Test",
+  "VBO006" = "Test",
+  "VBO007" = "Test",
+  "VBO008" = "Test",
+  "VBO009" = "Test",
+  "VBO010" = "Test",
+  "VBO011" = "Test",
+  "VBO012" = "Test",
+  "JVE008" = "WT",
+  "JVE010" = "Test"
+)
+seuratObjT$WT <- unname(WT_map[seuratObjT$orig.ident])
+####################################################
+
+
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -37,10 +115,7 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 
-sc <- import("scanpy", convert = FALSE)
-scvi <- import("scvi", convert = FALSE)
-
-
+py_config()
 adata <- convertFormat(seuratObjT,
                        from="seurat",
                        to="anndata",

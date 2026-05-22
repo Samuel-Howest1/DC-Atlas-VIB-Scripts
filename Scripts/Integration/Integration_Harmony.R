@@ -13,7 +13,7 @@ library("SeuratIntegrate")
 library("bench")
 
 ####################################################################
-folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
+folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 DataList <- DataList[-8]
@@ -109,14 +109,15 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.key = "rnaPC_int_")
 
 
-bench::mark(
+BenchResult <- bench::mark(
 seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
                          plot_convergence =TRUE, 
                          reduction.use ="RNA_pca_int", 
                          theta=2,
                          sigma=0.2,
                          lambda=0.8,
-                         verbose=TRUE)
+                         verbose=TRUE),
+              memory = FALSE
 )
 # Reduce max.itration?
 # Specific number of cluster?
@@ -127,7 +128,7 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40)
 
-DimPlot(seuratObjT,label = T,reduction = "harmony",group.by = "seurat_clusters")
+DimPlot(seuratObjT,label = T,reduction = "harmony",group.by = "sctype_classification")
 
                            
 #######################################################################""
@@ -156,7 +157,6 @@ ASWScore  <- ScoreASW(seuratObjT,
                       what = "integrated.cca",
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
-
 
 
 # Scoring
