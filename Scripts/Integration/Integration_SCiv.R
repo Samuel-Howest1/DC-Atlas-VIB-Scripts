@@ -13,6 +13,13 @@ library("reticulate")
 #install_miniconda()
 conda_list()
 
+conda_create("Integration", python_version = "3.11")
+
+conda_install(
+  envname = "scvi",
+  packages = c("scvi-tools"),
+  pip = TRUE
+)
 
 use_condaenv("Integration", required = TRUE)
 
