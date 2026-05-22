@@ -11,7 +11,9 @@ library("readxl")
 library("presto")
 library("SeuratIntegrate")
 library("bench")
-
+library("kBET")
+#install.packages("remotes")
+#remotes::install_github("theislab/kBET")
 ####################################################################
 folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
@@ -68,8 +70,8 @@ experiment_map <- c(
 seuratObjT$experiment <- unname(experiment_map[seuratObjT$orig.ident])
 
 WT_map <- c(
-  "SAM2" = "CITEseq_Test",
-  "SAM3" = "CITEseq_Test",
+  "SAM2" = "WT",
+  "SAM3" = "WT",
   "SAM05" = "WT",
   "SAM06" = "Test",
   "SAM016" = "WT",
@@ -90,11 +92,10 @@ WT_map <- c(
 seuratObjT$WT <- unname(WT_map[seuratObjT$orig.ident])
 ####################################################
 #Prepare for integration
-
 #Joining all Layers First together
-#seuratObjT <- JoinLayers(seuratObjT)
+seuratObjT <- JoinLayers(seuratObjT)
 
-#seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
+seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -108,7 +109,7 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 
-
+###############################################################################################
 BenchResult <- bench::mark(
 seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
                          plot_convergence =TRUE, 
@@ -139,11 +140,11 @@ DimPlot(seuratObjT,label = T,reduction = "harmony",group.by = "sctype_classifica
 KbetScore <- ScoreKBET(seuratObjT,
                        batch.var = "orig.ident",
                        cell.var = "sctype_classification",
-                       what = "integrated.cca")
+                       what = "harmony")
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
-LisiScore <- ScoreLISI(seuratObjT,integration = "integrated.cca",
+LisiScore <- ScoreLISI(seuratObjT,integration = "harmony",
                        reduction = "RNA_pca_int",
                        cell.var = "sctype_classification") # Niet ideaal
 AverageLisi <- mean(LisiScore$sctype_classification)
@@ -154,13 +155,13 @@ counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lo
 
 # AWS
 ASWScore  <- ScoreASW(seuratObjT,
-                      what = "integrated.cca",
+                      what = "harmony",
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
 
 
 # Scoring
-LisiScore <- ScoreLISI(seuratObjT,integration = "integrated.cca",reduction = "RNA_pca_int",cell.var = "sctype_classification")
+LisiScore <- ScoreLISI(seuratObjT,integration = "harmony",reduction = "RNA_pca_int",cell.var = "sctype_classification")
 
 AverageLisi <- mean(LisiScore$sctype_classification)
 

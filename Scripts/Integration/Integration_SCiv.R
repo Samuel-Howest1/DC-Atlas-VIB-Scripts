@@ -8,23 +8,6 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
-library("reticulate")
-library("sceasy")
-install_miniconda()
-conda_list()
-
-conda_create("Integration", python_version = "3.11")
-
-conda_install(
-  envname = "Integration",
-  packages = c("scvi-tools"),
-  pip = TRUE
-)
-
-use_condaenv("Integration", required = TRUE)
-
-sc <- import("scanpy", convert = FALSE)
-scvi <- import("scvi", convert = FALSE)
 
 
 ####################################################################
@@ -34,7 +17,7 @@ DataList <- list.files(folder)
 DataList <- DataList[-8]
 
 #Test Only JVE
-DataList <- DataList[1:2]
+DataList <- DataList[c(1:2,10:11)]
 start <- 1
 #Only CDC1
 for (i in DataList){
@@ -81,10 +64,10 @@ experiment_map <- c(
 )
 seuratObjT$experiment <- unname(experiment_map[seuratObjT$orig.ident])
 WT_map <- c(
-  "SAM2" = "CITEseq_Test",
-  "SAM3" = "CITEseq_Test",
+  "SAM2" = "WT",
+  "SAM3" = "WT",
   "SAM05" = "WT",
-  "SAM06" = "Test",
+  "SAM06" = "WT",
   "SAM016" = "WT",
   "VBO004" = "WT",
   "VBO005" = "Test",
@@ -96,12 +79,13 @@ WT_map <- c(
   "VBO011" = "Test",
   "VBO012" = "Test",
   "JVE008" = "WT",
-  "JVE010" = "Test"
+  "JVE010" = "Toxo"
 )
-seuratObjT$WT <- unname(WT_map[seuratObjT$orig.ident])
+seuratObjT$treatment <- unname(WT_map[seuratObjT$orig.ident])
 ####################################################
-
-
+# Seurat Pipline
+seuratObjT <- JoinLayers(seuratObjT)
+seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -114,18 +98,70 @@ seuratObjT <- RunPCA(seuratObjT,
                      assay = "RNA",
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
-library(SingleCellExperiment)
-library(zellkonverter)
+####################################
 
-sce <- as.SingleCellExperiment(seuratObjT)
 
-writeH5AD(
-  sce,
-  "adata.h5ad",
-  X_name = "counts"
+
+# SEURAT SCVI NOT GOOOD
+##########################################"""
+
+seuratObjT <- IntegrateLayers(object = seuratObjT,
+                              method = scVIIntegration,
+                              orig.reduction = "RNA_pca_int",
+                              new.reduction = "scvi", 
+                              conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/"
+                              )
+
+py_config()
+use_batch_norm = False
+
+seuratObjT<- scVIIntegration(
+                    object = seuratObjT,
+                    groups = "WT",
+                    layers = "counts",
+                    orig.reduction = "RNA_pca_int",
+                    new.reduction = "scvi", 
+                    conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
+                    ndims.out = 10,
+                    dropout_rate = 0.1,
+                    batch_size = 64,
+                    train_size = 1,
+                    )
+
+seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:10)
+seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:10)
+
+DimPlot(seuratObjT,label = T,reduction = "scvi",group.by = "sctype_classification")
+
+
+#####################################################3
+#ERROR CODE
+library("reticulate")
+library("sceasy")
+library("SingleCellExperiment")
+library("zellkonverter")
+#install_miniconda()
+#conda_list()
+
+#conda_create("Integration", python_version = "3.11")
+
+conda_install(
+  envname = "Integration",
+  packages = c("scvi-tools"),
+  pip = TRUE
 )
 
-adata <- sc$read_h5ad("adata.h5ad")
+use_condaenv("Integration", required = TRUE)
+
+
+reticulate::conda_install(
+  envname = "Integration",
+  packages = "Numpy >= 1.6"
+)
+sc <- import("scanpy", convert = FALSE)
+scvi <- import("scvi", convert = FALSE)
+
 
 py_config()
 adata <- convertFormat(seuratObjT,
@@ -151,8 +187,8 @@ latent = model$get_latent_representation()
 latent <- as.matrix(latent)
 rownames(latent) = colnames(seuratObjT)
 seuratObjT[["scvi"]] <- CreateDimReducObject(embeddings = latent,
-                                       key = "scvi_",
-                                       assay = DefaultAssay(seuratObjT))
+                                             key = "scvi_",
+                                             assay = DefaultAssay(seuratObjT))
 
 # Find clusters, then run UMAP, and visualize
 seuratObjT <- FindNeighbors(seuratObjT, dims = 1:10, reduction = "scvi")
@@ -164,20 +200,3 @@ DimPlot(seuratObjT, reduction = "umap", pt.size = 3)
 
 
 
-
-
-# SEURAT SCVI NOT GOOOD
-##########################################"""
-
-seuratObjT <- IntegrateLayers(object = seuratObjT,
-                              method = scVIIntegration,
-                              orig.reduction = "RNA_pca_int",
-                              new.reduction = "scvi", 
-                              conda_env = "/Users/samue/miniconda3/envs/Integration/"
-                              )
-
-seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:10)
-seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:10)
-
-DimPlot(seuratObjT,label = T,reduction = "scvi",group.by = "sctype_classification")
