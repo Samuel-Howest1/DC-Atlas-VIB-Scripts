@@ -114,6 +114,18 @@ seuratObjT <- RunPCA(seuratObjT,
                      assay = "RNA",
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
+library(SingleCellExperiment)
+library(zellkonverter)
+
+sce <- as.SingleCellExperiment(seuratObjT)
+
+writeH5AD(
+  sce,
+  "adata.h5ad",
+  X_name = "counts"
+)
+
+adata <- sc$read_h5ad("adata.h5ad")
 
 py_config()
 adata <- convertFormat(seuratObjT,
