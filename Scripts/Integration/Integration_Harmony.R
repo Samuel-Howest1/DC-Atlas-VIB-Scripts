@@ -141,33 +141,31 @@ KbetScore <- ScoreKBET(seuratObjT,
                        cell.var = "sctype_classification",
                        what = "harmony")
 
+KbetData <- as.data.frame(KbetScore)
+
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
 LisiScore <- ScoreLISI(seuratObjT,integration = "harmony",
                        reduction = "RNA_pca_int",
                        cell.var = "sctype_classification") # Niet ideaal
+LisiData <- as.data.frame(LisiScore)
+
 AverageLisi <- mean(LisiScore$sctype_classification)
 quantile(LisiScore$sctype_classification)
 breaks <- seq(0, 1, by = 0.2)
 counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
 ## LISIi Batch mixing
 
+
+
 # AWS
 ASWScore  <- ScoreASW(seuratObjT,
                       what = "harmony",
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
+ASWData <- as.data.frame(ASWScore)
 
 
-# Scoring
-LisiScore <- ScoreLISI(seuratObjT,integration = "harmony",reduction = "RNA_pca_int",cell.var = "sctype_classification")
-
-AverageLisi <- mean(LisiScore$sctype_classification)
-
-quantile(LisiScore$sctype_classification)
-
-breaks <- seq(0, 1, by = 0.2)
-counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
 
 
 
