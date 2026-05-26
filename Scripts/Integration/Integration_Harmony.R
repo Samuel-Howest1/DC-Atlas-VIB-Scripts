@@ -124,12 +124,11 @@ seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT",
 # Specific number of cluster?
 
 
-
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40,reduction.name = "harmony_umap")
 
-DimPlot(seuratObjT,label = T,reduction = "harmony",group.by = "sctype_classification")
+DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "harmony_umap")
 
                            
 #######################################################################""

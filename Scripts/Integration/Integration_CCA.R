@@ -123,6 +123,13 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               orig.reduction = "RNA_pca_int",
                               new.reduction = "integrated.cca",
                               verbose = TRUE)
+
+seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
+seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "integrated.cca",dims = 1:40,reduction.name = "CCA_umap")
+
+DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "CCA_umap")
+
 #######################################################################""
 #SCORING
 
@@ -142,6 +149,8 @@ AverageLisi <- mean(LisiScore$sctype_classification)
 quantile(LisiScore$sctype_classification)
 breaks <- seq(0, 1, by = 0.2)
 counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
+
+
 ## LISIi Batch mixing
 
 # AWS

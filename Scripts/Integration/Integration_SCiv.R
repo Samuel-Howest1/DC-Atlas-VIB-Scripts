@@ -132,7 +132,7 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:10)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:10)
 
-DimPlot(seuratObjT,label = T,reduction = "scvi",group.by = "sctype_classification")
+DimPlot(seuratObjT,label = T,group.by = "orig.ident")
 
 
 #####################################################3
