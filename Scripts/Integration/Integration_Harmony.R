@@ -16,7 +16,12 @@ library("openxlsx")
 #install.packages("remotes")
 #remotes::install_github("theislab/kBET")
 ####################################################################
-folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
+# for script
+
+#setwd()
+#seuratObjT <- readRDS()
+###################################################################
+folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 DataList <- DataList[-8]
@@ -90,13 +95,13 @@ WT_map <- c(
 )
 
 
-seuratObjT$WT <- unname(WT_map[seuratObjT$orig.ident])
+seuratObjT$treatment <- unname(WT_map[seuratObjT$orig.ident])
 ####################################################
 #Prepare for integration
 #Joining all Layers First together
 seuratObjT <- JoinLayers(seuratObjT)
 
-seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
+seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$treatment)
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -112,12 +117,13 @@ seuratObjT <- RunPCA(seuratObjT,
 
 ###############################################################################################
 BenchResult <- bench::mark(
-seuratObjT <- RunHarmony(seuratObjT, group.by.vars ="WT", 
+seuratObjT <- RunHarmony(seuratObjT, 
+                         group.by.vars ="treatment", 
                          plot_convergence =TRUE, 
                          reduction.use ="RNA_pca_int", 
-                         theta=2,
+                         theta=3,
                          sigma=0.2,
-                         lambda=0.8,
+                         lambda=1,
                          verbose=TRUE),
               memory = FALSE
 )
@@ -129,7 +135,7 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40,reduction.name = "harmony_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "harmony_umap")
+DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
 
                            
 #######################################################################""
@@ -146,16 +152,43 @@ KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
-LisiScore <- ScoreLISI(seuratObjT,integration = "harmony",
-                       reduction = "RNA_pca_int",
-                       cell.var = "sctype_classification") # Niet ideaal
-LisiData <- as.data.frame(LisiScore)
+LisiCelltype <- ScoreLISI(seuratObjT,
+                          integration = "harmony",
+                          reduction = "RNA_pca_int",
+                          cell.var = "sctype_classification")
 
-AverageLisi <- mean(LisiScore$sctype_classification)
-quantile(LisiScore$sctype_classification)
-breaks <- seq(0, 1, by = 0.2)
-counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
 ## LISIi Batch mixing
+LisiBatch <- ScoreLISI(seuratObjT,
+                       integration = "harmony",
+                       reduction = "RNA_pca_int",
+                       batch.var = "treatment")
+
+
+LisiData <- as.data.frame(c(LisiCelltype,LisiBatch))
+colnames(LisiData) <- c("Lisi Celltype score","Lisi Batch score")
+
+#################################"
+# Lisi stats
+
+celltype_stats <- c(
+  Mean = mean(LisiCelltype$sctype_classification),
+  quantile(LisiCelltype$sctype_classification),
+  table(cut(LisiCelltype$sctype_classification, breaks = 4)))
+
+batch_stats <- c(
+  Mean = mean(LisiBatch$treatment),
+  quantile(LisiBatch$treatment),
+  table(cut(LisiBatch$treatment, breaks = 4)))
+  
+###################################
+#LISI RESULT DATAFRAME
+
+
+LisiResults<- data.frame(
+  Statistic = names(celltype_stats),
+  cLISI_CellType = as.numeric(celltype_stats),
+  iLISI_Batch = as.numeric(batch_stats)
+)
 
 
 
@@ -171,8 +204,11 @@ wb <- createWorkbook()
 addWorksheet(wb, "KBET")
 writeData(wb, "KBET", KbetData)
 
-addWorksheet(wb, "LISI")
-writeData(wb, "LISI", LisiData)
+addWorksheet(wb, "LISI_Raw")
+writeData(wb, "LISI_Raw", LisiData)
+
+addWorksheet(wb, "LISI_result")
+writeData(wb, "LISI_result",LisiResults )
 
 addWorksheet(wb, "ASW")
 writeData(wb, "ASW", ASWData)
@@ -184,5 +220,20 @@ saveWorkbook(
   overwrite = TRUE
 )
 
+##############################"
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("Graphs_Harmony_Integration", width = 14,height = 10)
+for (i in Plotslist){
 
+    AnnotTitle <- paste0("Plot Harmony integration: ",i)
+    print(AnnotTitle)
+    
+    p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
+    p_combined <- p + plot_annotation(title = AnnotTitle)
+    
+    print(p_combined)
+  
+}
+dev.off()
 
