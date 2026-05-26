@@ -165,7 +165,23 @@ ASWScore  <- ScoreASW(seuratObjT,
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
 
+wb <- createWorkbook()
 
+addWorksheet(wb, "KBET")
+writeData(wb, "KBET", KbetData)
+
+addWorksheet(wb, "LISI")
+writeData(wb, "LISI", LisiData)
+
+addWorksheet(wb, "ASW")
+writeData(wb, "ASW", ASWData)
+
+# Save Excel file
+saveWorkbook(
+  wb,
+  file = "Integration_Scoring_Results.xlsx",
+  overwrite = TRUE
+)
 
 
 
