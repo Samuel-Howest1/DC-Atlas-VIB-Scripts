@@ -8,8 +8,9 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
-
-
+#if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
+#BiocManager::install("anndataR")
+library("anndataR")
 ####################################################################
 folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
@@ -82,10 +83,11 @@ WT_map <- c(
   "JVE010" = "Toxo"
 )
 seuratObjT$treatment <- unname(WT_map[seuratObjT$orig.ident])
+
 ####################################################
 # Seurat Pipline
 seuratObjT <- JoinLayers(seuratObjT)
-seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
+seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$treatment)
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -100,17 +102,27 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.key = "rnaPC_int_")
 ####################################
 
-
-
-# SEURAT SCVI NOT GOOOD
-##########################################"""
-
 seuratObjT <- IntegrateLayers(object = seuratObjT,
                               method = scVIIntegration,
+                              #Amount of threads used
+                              torch.intraop.threads = 4,
+                              n_hidden=256,
+                              ndims.out= 40,
                               orig.reduction = "RNA_pca_int",
                               new.reduction = "scvi", 
-                              conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/"
+                              conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
+                              batch_key = "treatment",
+                              verbose=TRUE
                               )
+
+seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
+seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40)
+
+DimPlot(seuratObjT,label = T,group.by = "orig.ident")
+
+######################################################################################
+
 
 py_config()
 use_batch_norm = False
@@ -118,6 +130,7 @@ use_batch_norm = False
 seuratObjT<- scVIIntegration(
                     object = seuratObjT,
                     groups = "WT",
+                    groups.name = "WT",
                     layers = "counts",
                     orig.reduction = "RNA_pca_int",
                     new.reduction = "scvi", 
@@ -125,15 +138,8 @@ seuratObjT<- scVIIntegration(
                     ndims.out = 10,
                     dropout_rate = 0.1,
                     batch_size = 64,
-                    train_size = 1,
+                    train_size = 0.9,
                     )
-
-seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:10)
-seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:10)
-
-DimPlot(seuratObjT,label = T,group.by = "orig.ident")
-
 
 #####################################################3
 #ERROR CODE
@@ -164,15 +170,28 @@ scvi <- import("scvi", convert = FALSE)
 
 
 py_config()
-adata <- convertFormat(seuratObjT,
-                       from="seurat",
-                       to="anndata",
-                       main_layer="counts",
-                       drop_single_values=FALSE)
+#Org.idents i causing issues
+colnames(seuratObjT@meta.data) <- gsub("\\.", "_", colnames(seuratObjT@meta.data))
+
+adata <- as_AnnData(
+  seuratObjT,
+  assay_name = "RNA",
+  x_mapping = "counts",
+  layers_mapping = c("dense_counts"),
+  obs_mapping = c(RNA_count = "nCount_RNA"),
+  var_mapping = FALSE,
+  obsm_mapping = list(X_pca = "RNA_pca_int"),
+  obsp_mapping = TRUE,
+)
+#adata <- convertFormat(seuratObjT,
+#                       from="seurat",
+#                       to="anndata",
+#                       main_layer="counts",
+#                       drop_single_values=FALSE)
 print(adata)
 
 # run setup_anndata
-scvi$model$SCVI$setup_anndata(adata, batch_key='orig.ident')
+scvi$model$SCVI$setup_anndata(adata, batch_key='WT')
 
 # create the model
 model = scvi$model$SCVI(adata)

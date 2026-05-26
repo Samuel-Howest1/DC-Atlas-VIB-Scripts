@@ -12,6 +12,7 @@ library("presto")
 library("SeuratIntegrate")
 library("bench")
 library("kBET")
+library("openxlsx")
 #install.packages("remotes")
 #remotes::install_github("theislab/kBET")
 ####################################################################
