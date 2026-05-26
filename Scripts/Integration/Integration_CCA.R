@@ -1,17 +1,13 @@
 
 
 # Install SeuratIntergrate
-if (!require("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-if (!require("remotes", quietly = TRUE))
-  install.packages("remotes")
-remotes::install_github("cbib/Seurat-Integrate", dependencies = NA, repos = BiocManager::repositories()) 
+#if (!require("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+#if (!require("remotes", quietly = TRUE))
+#  install.packages("remotes")
+#remotes::install_github("cbib/Seurat-Integrate", dependencies = NA, repos = BiocManager::repositories()) 
 
 #Packages
-
-
-
-
 
 library("renv")
 library("Seurat")
@@ -20,16 +16,17 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
-library()
-
+#if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
+#BiocManager::install("anndataR")
+library("anndataR")
 ####################################################################
-folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
+folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 DataList <- DataList[-8]
 
 #Test Only JVE
-DataList <- DataList[1:2]
+DataList <- DataList[c(1:2,10:11)]
 start <- 1
 #Only CDC1
 for (i in DataList){
@@ -74,14 +71,12 @@ experiment_map <- c(
   "JVE008" = "CITEseq_Toxo",
   "JVE010" = "CITEseq_Toxo"
 )
-
 seuratObjT$experiment <- unname(experiment_map[seuratObjT$orig.ident])
-
 WT_map <- c(
-  "SAM2" = "CITEseq_Test",
-  "SAM3" = "CITEseq_Test",
-  "SAM05" = "WT",
-  "SAM06" = "Test",
+  "SAM2"   = "WT",
+  "SAM3"   = "WT",
+  "SAM05"  = "WT",
+  "SAM06"  = "WT",
   "SAM016" = "WT",
   "VBO004" = "WT",
   "VBO005" = "Test",
@@ -93,18 +88,14 @@ WT_map <- c(
   "VBO011" = "Test",
   "VBO012" = "Test",
   "JVE008" = "WT",
-  "JVE010" = "Test"
+  "JVE010" = "Toxo"
 )
+seuratObjT$treatment <- unname(WT_map[seuratObjT$orig.ident])
 
-
-seuratObjT$WT <- unname(WT_map[seuratObjT$orig.ident])
 ####################################################
-#Prepare for integration
-
-#Joining all Layers First together
-#seuratObjT <- JoinLayers(seuratObjT)
-
-#seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$WT)
+# Seurat Pipline
+seuratObjT <- JoinLayers(seuratObjT)
+seuratObjT[["RNA"]] <- split(seuratObjT[["RNA"]],f = seuratObjT$treatment)
 
 seuratObjT <- NormalizeData(seuratObjT, normalization.method = "LogNormalize", scale.factor = 1e4)
 seuratObjT <- FindVariableFeatures(seuratObjT, selection.method = 'vst', nfeatures = 2000)
@@ -122,6 +113,10 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               method = CCAIntegration,
                               orig.reduction = "RNA_pca_int",
                               new.reduction = "integrated.cca",
+                              # Must mqtch Normalization method
+                              normalization.method = "LogNormalize",
+                              dims=1:40,
+                              dims.to.integrate = 40,
                               verbose = TRUE)
 
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
@@ -133,56 +128,103 @@ DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "CCA
 #######################################################################""
 #SCORING
 
+
+#######################################################################""
+#SCORING
+
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
 
 KbetScore <- ScoreKBET(seuratObjT,
                        batch.var = "orig.ident",
                        cell.var = "sctype_classification",
-                       what = "integrated.cca")
+                       what = "harmony")
+
+KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
-LisiScore <- ScoreLISI(seuratObjT,integration = "integrated.cca",
-                       reduction = "RNA_pca_int",
-                       cell.var = "sctype_classification") # Niet ideaal
-AverageLisi <- mean(LisiScore$sctype_classification)
-quantile(LisiScore$sctype_classification)
-breaks <- seq(0, 1, by = 0.2)
-counts <- table(cut(LisiScore$sctype_classification, breaks = breaks, include.lowest = TRUE))
-
+LisiCelltype <- ScoreLISI(seuratObjT,
+                          integration = "harmony",
+                          reduction = "RNA_pca_int",
+                          cell.var = "sctype_classification")
 
 ## LISIi Batch mixing
+LisiBatch <- ScoreLISI(seuratObjT,
+                       integration = "harmony",
+                       reduction = "RNA_pca_int",
+                       batch.var = "treatment")
+
+
+LisiData <- as.data.frame(c(LisiCelltype,LisiBatch))
+colnames(LisiData) <- c("Lisi Celltype score","Lisi Batch score")
+
+#################################"
+# Lisi stats
+
+celltype_stats <- c(
+  Mean = mean(LisiCelltype$sctype_classification),
+  quantile(LisiCelltype$sctype_classification),
+  table(cut(LisiCelltype$sctype_classification, breaks = 4)))
+
+batch_stats <- c(
+  Mean = mean(LisiBatch$treatment),
+  quantile(LisiBatch$treatment),
+  table(cut(LisiBatch$treatment, breaks = 4)))
+
+###################################
+#LISI RESULT DATAFRAME
+
+
+LisiResults<- data.frame(
+  Statistic = names(celltype_stats),
+  cLISI_CellType = as.numeric(celltype_stats),
+  iLISI_Batch = as.numeric(batch_stats)
+)
+
+
 
 # AWS
 ASWScore  <- ScoreASW(seuratObjT,
-                      what = "integrated.cca",
+                      what = "harmony",
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
+ASWData <- as.data.frame(ASWScore)
 
+wb <- createWorkbook()
 
+addWorksheet(wb, "KBET")
+writeData(wb, "KBET", KbetData)
 
+addWorksheet(wb, "LISI_Raw")
+writeData(wb, "LISI_Raw", LisiData)
 
-# Merge has every dataset in separate layer
+addWorksheet(wb, "LISI_result")
+writeData(wb, "LISI_result",LisiResults )
 
-CellCycleScoringPerBatch()
+addWorksheet(wb, "ASW")
+writeData(wb, "ASW", ASWData)
 
-#Measure the degree on which cell of the same celltype cluster togheter
-AddScoreASW(object = SeuratObjT,integration = ,cell.var = ,what = ,assay = ,)
+# Save Excel file
+saveWorkbook(
+  wb,
+  file = "Integration_Scoring_Results.xlsx",
+  overwrite = TRUE
+)
 
-# Need a refrence for known cell type of each cell ---> Maybe avaibale?
-AddScoreARI()
+##############################"
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("Graphs_Harmony_Integration", width = 14,height = 10)
+for (i in Plotslist){
+  
+  AnnotTitle <- paste0("Plot Harmony integration: ",i)
+  print(AnnotTitle)
+  
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  print(p_combined)
+  
+}
+dev.off()
 
-# Make a score of the clustering result (Thus which celltype) compared to the cell type of each cell
-# How higher the score how more acurate the clustering is.
-#Not that good of a scoring Methode
-AddScoreNMI()
-
-# Compute the Local Inverse Simpson's Index (LISI) to estimate batch mixing or cell type mixing (iLISI and cLISI respectively according to Luecken M.D. et al., 2022).
-# Good scoring method
-AddScoreLISI()
-
-#
-AddScoreKBET()
-
-# Compare PCA if done Batch per Batch compared to the full dataset at once
-AddScoreScGraph()
