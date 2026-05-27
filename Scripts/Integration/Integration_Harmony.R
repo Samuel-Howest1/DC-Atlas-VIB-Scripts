@@ -17,9 +17,10 @@ library("openxlsx")
 #remotes::install_github("theislab/kBET")
 ####################################################################
 # for script
+#setwd(/srv/data/local/samuelg/)
 
-#setwd()
-#seuratObjT <- readRDS()
+output <- "/srv/data/local/samuelg/Output"
+seuratObjT <- readRDS("Subset_Merged_seurat500.rds")
 ###################################################################
 folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
@@ -27,7 +28,7 @@ DataList <- list.files(folder)
 DataList <- DataList[-8]
 
 #Test Only JVE
-DataList <- DataList[1:2]
+DataList <- DataList[c(1:2,10:11)]
 start <- 1
 #Only CDC1
 for (i in DataList){
@@ -49,6 +50,18 @@ for (i in DataList){
     seuratObjT <- merge(seuratObjT,tmp)
   }
 }
+###################################33
+# fix error
+# The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
+# issue by renaming the sctype based on Annotation_VBO 
+
+# Late mature cDC1s ??? Migratory dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Late mature cDC1s"] <- "Migratory dendritic cells 1"
+
+# Early mature cDC1s ??? Dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Early mature cDC1s"] <- " Dendritic cells 1"
+
+########################################
 
 rm(tmp)
 gc()
@@ -63,11 +76,11 @@ experiment_map <- c(
   "VBO004" = "CITEseq_LNP_WT",
   "VBO005" = "CITEseq_LNP_eLNPs",
   "VBO006" = "CITEseq_LNP_pIC_LNPs",
-  "VBO007" = "CITEseq_LNP_CpG",
+  "VBO007" = "CITEseq_LNP_CpG_LNPs",
   "VBO008" = "CITEseq_LNP_pIC",
   "VBO009" = "CITEseq_LNP_eLNPs",
-  "VBO010" = "CITEseq_LNP_pIC",
-  "VBO011" = "CITEseq_LNP_CpG",
+  "VBO010" = "CITEseq_LNP_pIC_LNPS",
+  "VBO011" = "CITEseq_LNP_CpG_LNPs",
   "VBO012" = "CITEseq_LNP_pIC",
   "JVE008" = "CITEseq_Toxo",
   "JVE010" = "CITEseq_Toxo"
@@ -118,10 +131,10 @@ seuratObjT <- RunPCA(seuratObjT,
 ###############################################################################################
 BenchResult <- bench::mark(
 seuratObjT <- RunHarmony(seuratObjT, 
-                         group.by.vars ="treatment", 
+                         group.by.vars =c("treatment","experiment"), 
                          plot_convergence =TRUE, 
                          reduction.use ="RNA_pca_int", 
-                         theta=3,
+                         theta=c(2,2),
                          sigma=0.2,
                          lambda=1,
                          verbose=TRUE)
@@ -134,7 +147,7 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40,reduction.name = "harmony_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
+DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "harmony_umap")
 
                            
 #######################################################################""
@@ -230,10 +243,10 @@ saveWorkbook(
 ##############################"
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration", width = 10,height = 8)
+pdf("Graphs_Harmony_Integration2", width = 10,height = 8)
 for (i in Plotslist){
 
-    AnnotTitle <- paste0("Plot Harmony integration: ",i)
+    AnnotTitle <- paste0("Plot Harmony integration2: ",i)
     print(AnnotTitle)
     
     p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
@@ -244,3 +257,5 @@ for (i in Plotslist){
 }
 dev.off()
 
+setwd(output)
+saveRDS(seuratObjT,"SeurqtObjT_Harmomy_Subset.rds")

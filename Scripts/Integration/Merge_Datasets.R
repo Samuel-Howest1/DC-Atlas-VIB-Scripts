@@ -163,31 +163,8 @@ Ccr2
 
 # RBC are conclusif as being Cluster 24 and 27
 
-# Cluster 30 is certainly NOT a CDC1, It looks like to be q T-cell of a kind
+# Cluster 30 is certainly NOT a CDC1, It looks like to be a T-cell of a kind
 
-# seuratObjT for integration
-
-seuratObjTCCA <- IntegrateLayers(object = seuratObjT,
-                                 method = CCAIntegration,
-                                 orig.reduction = "RNA_pca_int",
-                                 new.reduction = "integrated.cca",
-                                 verbose = FALSE)
-
-seuratObjTCCA[["RNA"]] <- JoinLayers(seuratObjTCCA[["RNA"]])
-
-seuratObjTCCA <- FindNeighbors(seuratObjTCCA, reduction = "integrated.cca", dims = 1:30)
-seuratObjTCCA <- FindClusters(seuratObjTCCA, resolution = 1)
-seuratObjTCCA <- RunUMAP(seuratObjTCCA, dims = 1:30, reduction = "integrated.cca")
-DimPlot(seuratObjTCCA, reduction = "umap")
-# Planning? 
-
-# Load all SeuratObjCDC1 or SeuratObjR into 1 Seuratobject
-
-# Use Split Function to split every dataset into it own layer
-
-##### Analysis already perfomed go direct to integrate
-
-#Intergration
 
 
 
