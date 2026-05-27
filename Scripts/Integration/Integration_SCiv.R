@@ -55,15 +55,15 @@ experiment_map <- c(
   "SAM05" = "CITEseq_Final",
   "SAM06" = "CITEseq_Final",
   "SAM016" = "CITEseq_Notch",
-  "VBO004" = "CITEseq_LNP",
-  "VBO005" = "CITEseq_LNP",
-  "VBO006" = "CITEseq_LNP",
-  "VBO007" = "CITEseq_LNP",
-  "VBO008" = "CITEseq_LNP",
-  "VBO009" = "CITEseq_LNP",
-  "VBO010" = "CITEseq_LNP",
-  "VBO011" = "CITEseq_LNP",
-  "VBO012" = "CITEseq_LNP",
+  "VBO004" = "CITEseq_LNP_WT",
+  "VBO005" = "CITEseq_LNP_eLNPs",
+  "VBO006" = "CITEseq_LNP_pIC_LNPs",
+  "VBO007" = "CITEseq_LNP_CpG",
+  "VBO008" = "CITEseq_LNP_pIC",
+  "VBO009" = "CITEseq_LNP_eLNPs",
+  "VBO010" = "CITEseq_LNP_pIC",
+  "VBO011" = "CITEseq_LNP_CpG",
+  "VBO012" = "CITEseq_LNP_pIC",
   "JVE008" = "CITEseq_Toxo",
   "JVE010" = "CITEseq_Toxo"
 )
@@ -121,34 +121,11 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
 )
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40,reduction.name = "scvi_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "orig.ident")
+DimPlot(seuratObjT,label = T,group.by = "orig.ident",reduction = "scvi_umap")
 
 ######################################################################################
-
-seuratObjT<- scVIIntegration(
-                    object = seuratObjT,
-                    groups = "WT",
-                    groups.name = "WT",
-                    layers = "counts",
-                    orig.reduction = "RNA_pca_int",
-                    new.reduction = "scvi", 
-                    conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
-                    ndims.out = 10,
-                    dropout_rate = 0.1,
-                    batch_size = 64,
-                    train_size = 0.9,
-                    )
-
-seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
-seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
-seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40,reduction.name = "harmony_umap")
-
-DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
-
-
-#######################################################################""
 #SCORING
 
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
@@ -249,6 +226,28 @@ dev.off()
 
 
 #####################################################3
+# Other way with SeuratIntegrate package ---> get batch error
+#seuratObjT<- scVIIntegration(
+#  object = seuratObjT,
+#  groups = "WT",
+#  groups.name = "WT",
+#  layers = "counts",
+#  orig.reduction = "RNA_pca_int",
+#  new.reduction = "scvi", 
+#  conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
+#  ndims.out = 10,
+#  dropout_rate = 0.1,
+#  batch_size = 64,
+#  train_size = 0.9,
+#)
+
+#seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
+#seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
+#seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40,reduction.name = "harmony_umap")
+
+#DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
+#
+###################################################################
 #ERROR CODE 
 #library("reticulate")
 #library("sceasy")
