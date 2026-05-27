@@ -8,9 +8,13 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
+library("bench")
+library("kBET")
+library("openxlsx")
+
 #if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
 #BiocManager::install("anndataR")
-library("anndataR")
+#library("anndataR")
 ####################################################################
 folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
@@ -101,7 +105,7 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 ####################################
-
+BenchResult <- bench::mark(
 seuratObjT <- IntegrateLayers(object = seuratObjT,
                               method = scVIIntegration,
                               #Amount of threads used
@@ -114,7 +118,7 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               batch_key = "treatment",
                               verbose=TRUE
                               )
-
+)
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40)
@@ -122,10 +126,6 @@ seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40)
 DimPlot(seuratObjT,label = T,group.by = "orig.ident")
 
 ######################################################################################
-
-
-py_config()
-use_batch_norm = False
 
 seuratObjT<- scVIIntegration(
                     object = seuratObjT,
@@ -141,81 +141,172 @@ seuratObjT<- scVIIntegration(
                     train_size = 0.9,
                     )
 
+seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
+seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
+seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40,reduction.name = "harmony_umap")
+
+DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
+
+
+#######################################################################""
+#SCORING
+
+# KBET Scoring Measuring that cell have a blanced mixed of Batches
+
+KbetScore <- ScoreKBET(seuratObjT,
+                       batch.var = "orig.ident",
+                       cell.var = "sctype_classification",
+                       what = "scvi")
+
+KbetData <- as.data.frame(KbetScore)
+
+#LISI Scoring 
+## LISIe Scoring cell Mixing
+LisiCelltype <- ScoreLISI(seuratObjT,
+                          integration = "scvi",
+                          reduction = "RNA_pca_int",
+                          cell.var = "sctype_classification")
+
+## LISIi Batch mixing
+LisiBatch <- ScoreLISI(seuratObjT,
+                       integration = "scvi",
+                       reduction = "RNA_pca_int",
+                       batch.var = "treatment")
+
+
+LisiData <- as.data.frame(c(LisiCelltype,LisiBatch))
+colnames(LisiData) <- c("Lisi Celltype score","Lisi Batch score")
+
+#################################"
+# Lisi stats
+
+celltype_stats <- c(
+  Mean = mean(LisiCelltype$sctype_classification),
+  quantile(LisiCelltype$sctype_classification),
+  table(cut(LisiCelltype$sctype_classification, breaks = 4)))
+
+batch_stats <- c(
+  Mean = mean(LisiBatch$treatment),
+  quantile(LisiBatch$treatment),
+  table(cut(LisiBatch$treatment, breaks = 4)))
+
+###################################
+#LISI RESULT DATAFRAME
+
+
+LisiResults<- data.frame(
+  Statistic = names(celltype_stats),
+  cLISI_CellType = as.numeric(celltype_stats),
+  iLISI_Batch = as.numeric(batch_stats)
+)
+
+# AWS
+ASWScore  <- ScoreASW(seuratObjT,
+                      what = "scvi",
+                      cell.var = "sctype_classification",
+                      verbose = TRUE,)
+ASWData <- as.data.frame(ASWScore)
+
+wb <- createWorkbook()
+
+addWorksheet(wb, "KBET")
+writeData(wb, "KBET", KbetData)
+
+addWorksheet(wb, "LISI_Raw")
+writeData(wb, "LISI_Raw", LisiData)
+
+addWorksheet(wb, "LISI_result")
+writeData(wb, "LISI_result",LisiResults )
+
+addWorksheet(wb, "ASW")
+writeData(wb, "ASW", ASWData)
+
+# Save Excel file
+saveWorkbook(
+  wb,
+  file = "Integration_Scoring_Results.xlsx",
+  overwrite = TRUE
+)
+
+##############################"
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("Graphs_Harmony_Integration", width = 10,height = 8)
+for (i in Plotslist){
+  
+  AnnotTitle <- paste0("Plot Harmony integration: ",i)
+  print(AnnotTitle)
+  
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  print(p_combined)
+  
+}
+dev.off()
+
+
+
+
 #####################################################3
-#ERROR CODE
-library("reticulate")
-library("sceasy")
-library("SingleCellExperiment")
-library("zellkonverter")
+#ERROR CODE 
+#library("reticulate")
+#library("sceasy")
+#library("SingleCellExperiment")
+#library("zellkonverter")
 #install_miniconda()
 #conda_list()
-
 #conda_create("Integration", python_version = "3.11")
-
-conda_install(
-  envname = "Integration",
-  packages = c("scvi-tools"),
-  pip = TRUE
-)
-
-use_condaenv("Integration", required = TRUE)
-
-
-reticulate::conda_install(
-  envname = "Integration",
-  packages = "Numpy >= 1.6"
-)
-sc <- import("scanpy", convert = FALSE)
-scvi <- import("scvi", convert = FALSE)
-
-
-py_config()
+#conda_install(
+#  envname = "Integration",
+#  packages = c("scvi-tools"),
+#  pip = TRUE
+#)
+#use_condaenv("Integration", required = TRUE)
+#reticulate::conda_install(
+#  envname = "Integration",
+#  packages = "Numpy >= 1.6"
+#)
+#sc <- import("scanpy", convert = FALSE)
+#scvi <- import("scvi", convert = FALSE)
+#py_config()
 #Org.idents i causing issues
-colnames(seuratObjT@meta.data) <- gsub("\\.", "_", colnames(seuratObjT@meta.data))
-
-adata <- as_AnnData(
-  seuratObjT,
-  assay_name = "RNA",
-  x_mapping = "counts",
-  layers_mapping = c("dense_counts"),
-  obs_mapping = c(RNA_count = "nCount_RNA"),
-  var_mapping = FALSE,
-  obsm_mapping = list(X_pca = "RNA_pca_int"),
-  obsp_mapping = TRUE,
-)
+#colnames(seuratObjT@meta.data) <- gsub("\\.", "_", colnames(seuratObjT@meta.data))
+#adata <- as_AnnData(
+#  seuratObjT,
+#  assay_name = "RNA",
+#  x_mapping = "counts",
+#  layers_mapping = c("dense_counts"),
+#  obs_mapping = c(RNA_count = "nCount_RNA"),
+#  var_mapping = FALSE,
+#  obsm_mapping = list(X_pca = "RNA_pca_int"),
+#  obsp_mapping = TRUE,
+#)
 #adata <- convertFormat(seuratObjT,
 #                       from="seurat",
 #                       to="anndata",
 #                       main_layer="counts",
 #                       drop_single_values=FALSE)
-print(adata)
-
+#print(adata)
 # run setup_anndata
-scvi$model$SCVI$setup_anndata(adata, batch_key='WT')
-
+#scvi$model$SCVI$setup_anndata(adata, batch_key='WT')
 # create the model
-model = scvi$model$SCVI(adata)
-
+#model = scvi$model$SCVI(adata)
 # train the model
-model$train()
-
+#model$train()
 # get the latent represenation
-latent = model$get_latent_representation()
-
+#latent = model$get_latent_representation()
 # put it back in our original Seurat object
-latent <- as.matrix(latent)
-rownames(latent) = colnames(seuratObjT)
-seuratObjT[["scvi"]] <- CreateDimReducObject(embeddings = latent,
-                                             key = "scvi_",
-                                             assay = DefaultAssay(seuratObjT))
-
+#latent <- as.matrix(latent)
+#rownames(latent) = colnames(seuratObjT)
+#seuratObjT[["scvi"]] <- CreateDimReducObject(embeddings = latent,
+#                                             key = "scvi_",
+#                                             assay = DefaultAssay(seuratObjT))
 # Find clusters, then run UMAP, and visualize
-seuratObjT <- FindNeighbors(seuratObjT, dims = 1:10, reduction = "scvi")
-seuratObjT <- FindClusters(seuratObjT, resolution =1)
-
-seuratObjT <- RunUMAP(seuratObjT, dims = 1:10, reduction = "scvi", n.components = 2)
-
-DimPlot(seuratObjT, reduction = "umap", pt.size = 3)
+#seuratObjT <- FindNeighbors(seuratObjT, dims = 1:10, reduction = "scvi")
+#seuratObjT <- FindClusters(seuratObjT, resolution =1)
+#seuratObjT <- RunUMAP(seuratObjT, dims = 1:10, reduction = "scvi", n.components = 2)
+#DimPlot(seuratObjT, reduction = "umap", pt.size = 3)
 
 
 

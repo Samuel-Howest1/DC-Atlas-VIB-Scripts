@@ -201,6 +201,9 @@ ASWData <- as.data.frame(ASWScore)
 
 wb <- createWorkbook()
 
+addWorksheet(wb, "Benchmark")
+writeData(wb, "Benchmark", BenchResult)
+
 addWorksheet(wb, "KBET")
 writeData(wb, "KBET", KbetData)
 
@@ -223,7 +226,7 @@ saveWorkbook(
 ##############################"
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration", width = 14,height = 10)
+pdf("Graphs_Harmony_Integration", width = 10,height = 8)
 for (i in Plotslist){
 
     AnnotTitle <- paste0("Plot Harmony integration: ",i)

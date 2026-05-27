@@ -16,10 +16,16 @@ library("harmony")
 library("readxl")
 library("presto")
 library("SeuratIntegrate")
-#if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
-#BiocManager::install("anndataR")
-library("anndataR")
+library("bench")
+library("kBET")
+library("openxlsx")
+
 ####################################################################
+# for script
+
+#setwd()
+#seuratObjT <- readRDS()
+###################################################################
 folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
@@ -109,6 +115,8 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 
+################################################################################
+BenchResult <- bench::mark(
 seuratObjT <- IntegrateLayers(object = seuratObjT,
                               method = CCAIntegration,
                               orig.reduction = "RNA_pca_int",
@@ -118,16 +126,12 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               dims=1:40,
                               dims.to.integrate = 40,
                               verbose = TRUE)
-
+)
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "integrated.cca",dims = 1:40,reduction.name = "CCA_umap")
 
 DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "CCA_umap")
-
-#######################################################################""
-#SCORING
-
 
 #######################################################################""
 #SCORING
@@ -214,12 +218,11 @@ saveWorkbook(
 ##############################"
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration", width = 14,height = 10)
+pdf("Graphs_Harmony_Integration", width = 10,height =8)
 for (i in Plotslist){
   
   AnnotTitle <- paste0("Plot Harmony integration: ",i)
   print(AnnotTitle)
-  
   p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
   p_combined <- p + plot_annotation(title = AnnotTitle)
   
