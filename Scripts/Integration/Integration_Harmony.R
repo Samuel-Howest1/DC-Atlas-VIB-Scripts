@@ -21,7 +21,7 @@ library("openxlsx")
 #setwd()
 #seuratObjT <- readRDS()
 ###################################################################
-folder <- "C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/"
+folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 DataList <- DataList[-8]
@@ -124,8 +124,7 @@ seuratObjT <- RunHarmony(seuratObjT,
                          theta=3,
                          sigma=0.2,
                          lambda=1,
-                         verbose=TRUE),
-              memory = FALSE
+                         verbose=TRUE)
 )
 # Reduce max.itration?
 # Specific number of cluster?
@@ -141,6 +140,11 @@ DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
 #######################################################################""
 #SCORING
 
+#Benchmqrk results, result and memory are object themself qand cause errors
+
+BenchResultData <- as.data.frame(BenchResult)
+BenchResultData <- BenchResultData[,!names(BenchResultData) %in% c("result", "memory","expression","gc")]
+BenchResultData <- as.data.frame(BenchResultData)
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
 
 KbetScore <- ScoreKBET(seuratObjT,
@@ -202,7 +206,7 @@ ASWData <- as.data.frame(ASWScore)
 wb <- createWorkbook()
 
 addWorksheet(wb, "Benchmark")
-writeData(wb, "Benchmark", BenchResult)
+writeData(wb, "Benchmark", BenchResultData)
 
 addWorksheet(wb, "KBET")
 writeData(wb, "KBET", KbetData)
