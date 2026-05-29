@@ -22,13 +22,15 @@ SeuratObjT <- DietSeurat(SeuratObjT,
               dimreducs = c("RNA_umap")
 )
 # List of Genes
-#genes <- rownames(seuratObjT)
-genes <- c("Test","Ccr7")
+genes <- rownames(SeuratObjT)
+#genes <- c("Test","Ccr7","Cd81")
 
+#ListMetadata
+metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
 # Define UI for application that draws a histogram
 
 ############## Base of UI #############################
-ui <-  page_navbar(theme = shinytheme("superhero"),
+ui <-  page_navbar(theme = shinytheme("united"),
   title = img(src="irc_logo_transparant.png",  
               height = "30px"),
   bg = "#8EE5EE",
@@ -92,8 +94,10 @@ tags$head(
  
 ##################################################################
 ############## Feature Plot Page ################################
-  nav_panel(title = "Feature plots",
-            
+  nav_panel(title = "Gene plots",
+            layout_column_wrap(
+              width = 1/2,
+        card(
             p("Select gene for feature plot."),
             
             tags$div( class = "input",
@@ -112,13 +116,94 @@ tags$head(
             ),
             
             tags$div(
-              plotlyOutput("feature_plot", height = "700px")
+              plotlyOutput("feature_plot", height = "700px",width = "700px")
             )
           ),
+        
+        card(
+            card_header("Violin Plot"),
+            plotOutput("ViolinPlot", height = "700px"),
+            
+            plotOutput("DotPlot", height = "700px")
+            
+          )
+          )
+        ),
   
 #############################################################################
-################# TBD ######################################################
-  nav_panel(title = "Three", p("Third page content.")),
+################# Cell Metdata ######################################################
+  nav_panel(title = "Cell Metadata", 
+            p("Select gene for feature plot."),
+            tags$div( class = "input",
+                      
+            selectizeInput(
+              inputId = "meta",
+              label = "Select Label for metadata",
+              choices = metadata,
+              selected = NULL,
+              multiple = FALSE,
+              options = list(
+              placeholder = 'Type a gene...',
+              create = TRUE   # allows typing custom values
+              )),
+            verbatimTextOutput("selected_metadata")
+            ),
+            
+            tags$div(
+              plotOutput("Dimplot", height = "700px",width = "700px")
+            )
+  ),
+
+
+###############################################################################
+############################ Gene Comparison #################################
+
+nav_panel(title = "Gene Comparison", 
+          p("Select gene for feature plot."),
+          tags$div( class = "input",
+                    
+                    selectizeInput(
+                      inputId = "gene_1",
+                      label = "Select Label for genes",
+                      choices = genes,
+                      selected = NULL,
+                      multiple = FALSE,
+                      options = list(
+                        placeholder = 'Type a gene...',
+                        create = TRUE   # allows typing custom values
+                      )),
+                    
+                    selectizeInput(
+                      inputId = "gene_2",
+                      label = "Select Label for genes",
+                      choices = genes,
+                      selected = NULL,
+                      multiple = FALSE,
+                      options = list(
+                        placeholder = 'Type a gene...',
+                        create = TRUE   # allows typing custom values
+                      )),
+                    verbatimTextOutput("selected_metadata")
+          ),
+          
+          tags$div(
+            plotOutput("Comparison", height = "700px",width = "700px")
+          )
+),
+
+##############################################################################
+############################## Contact #######################################
+nav_panel(title = "Contact", 
+          p("Select gene for feature plot."),
+          tags$div( class = "input",
+          ),
+          
+          tags$div(
+          )
+),
+
+################################################################################
+################################ Links ########################################
   nav_spacer(),
   nav_menu(
     title = "Links",
@@ -127,7 +212,6 @@ tags$head(
     nav_item(tags$a("Shiny", href = "https://shiny.posit.co"))
   )
 )
-
 
 
 # Define server logic required to draw a histogram
@@ -139,16 +223,28 @@ server <- function(input, output) {
     
     req(input$gene)
     
+    # Cell coordinetes
     umap <- SeuratObjT@reductions$RNA_umap@cell.embeddings
-    
+    # Gene 
     expr <- FetchData(SeuratObjT, vars = input$gene)
+    # Celltype
+    cell <- 
     
+    # Table for plotting
     df <- data.frame(
       UMAP_1 = umap[, "RNAumap_1"],
       UMAP_2 = umap[, "RNAumap_2"],
       expr = expr[, 1]
     )
-    
+    df$Celltype <- SeuratObjT$sctype_classification
+    # To male Hover Text of cells
+    df$hover <- paste(
+      rownames(df),
+      "<br>Expression:",
+      round(df$expr, 2),
+      "<br>Celltype:",df$Celltype
+    )
+    # Making a Plotly plot that resembles a featueplot
     plot_ly(
       df,
       x = ~UMAP_1,
@@ -156,9 +252,49 @@ server <- function(input, output) {
       color = ~expr,
       type = "scatter",
       mode = "markers",
+      text = ~hover,
+      #Removing Coordintates
+      hoverinfo= "text",
       marker = list(size = 3)
     )
   })
+  
+  output$Dimplot <- renderPlot({
+    DimPlot(SeuratObjT, group.by = input$meta)
+    
+  }) 
+  
+  output$ViolinPlot <- renderPlot({
+    
+    req(input$gene)
+    
+    VlnPlot(
+      SeuratObjT,
+      features = input$gene,
+      pt.size = 0
+    )+ theme_dark()
+  })
+
+  # Info verbeter zodat het duielijkt is 
+  output$DotPlot <- renderPlot({
+  DotPlot(
+    SeuratObjT,
+    features = input$gene,
+    group.by = "sctype_classification"
+  )
+  })
+  
+# ADD COUNT OF HOW MANY CELL PER GENE
+  output$Comparison <- renderPlot({
+    FeatureScatter(
+      SeuratObjT,
+      feature1 = input$gene_1,
+      feature2 = input$gene_2,
+    )
+  })
+  
 }
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
