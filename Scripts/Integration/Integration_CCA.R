@@ -12,9 +12,7 @@
 library("renv")
 library("Seurat")
 library("patchwork")
-library("harmony")
 library("readxl")
-library("presto")
 library("SeuratIntegrate")
 library("bench")
 library("kBET")
@@ -22,42 +20,55 @@ library("openxlsx")
 
 ####################################################################
 # for script
+#setwd("/srv/data/local/samuelg/")
 
-#setwd()
-#seuratObjT <- readRDS()
+output <- "/srv/data/local/samuelg/Output"
+seuratObjT <- readRDS("SeuratObjT_Before_Integration_V2")
 ###################################################################
-folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
-DataList <- list.files(folder)
-# Removing VBO_merge out of DataList/ comment out if not neede
-DataList <- DataList[-8]
-
-#Test Only JVE
-DataList <- DataList[c(1:2,10:11)]
-start <- 1
-#Only CDC1
-for (i in DataList){
-  print(i)
-  #Starting seuratobject
-  if (start == 1){
-    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #    seuratObjT <- seuratObjT
-    start <- start + 1
-    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
-    seuratObjT$orig.ident <- i
-  }
-  
-  else{
-    tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #  tmp <- tmp[,1:500] 
-    tmp$orig.ident <- i
-    colnames(tmp)<- paste0(colnames(tmp),"_",i)
-    seuratObjT <- merge(seuratObjT,tmp)
-  }
-}
-
-rm(tmp)
-gc()
+#folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
+#DataList <- list.files(folder)
+## Removing VBO_merge out of DataList/ comment out if not neede
+#DataList <- DataList[-8]
+#
+##Test Only JVE
+#DataList <- DataList[c(1:2,10:11)]
+#start <- 1
+##Only CDC1
+#for (i in DataList){
+#  print(i)
+#  #Starting seuratobject
+#  if (start == 1){
+#    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#    #    seuratObjT <- seuratObjT
+#    start <- start + 1
+#    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
+#    seuratObjT$orig.ident <- i
+# # }
+#  
+#  else{
+#    tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#    #  tmp <- tmp[,1:500] 
+#    tmp$orig.ident <- i
+#    colnames(tmp)<- paste0(colnames(tmp),"_",i)
+#    seuratObjT <- merge(seuratObjT,tmp)
+#  }
+#}
+#
+#rm(tmp)
+#gc()
 #################################################################
+###################################33
+# fix error
+# The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
+# issue by renaming the sctype based on Annotation_VBO 
+
+# Late mature cDC1s ??? Migratory dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Late mature cDC1s"] <- "Migratory dendritic cells 1"
+
+# Early mature cDC1s ??? Dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Early mature cDC1s"] <- " Dendritic cells 1"
+
+########################################
 # Adding Metadata
 experiment_map <- c(
   "SAM2" = "CITEseq_Test",
@@ -71,7 +82,7 @@ experiment_map <- c(
   "VBO007" = "CITEseq_LNP_CpG",
   "VBO008" = "CITEseq_LNP_pIC",
   "VBO009" = "CITEseq_LNP_eLNPs",
-  "VBO010" = "CITEseq_LNP_pIC",
+  "VBO010" = "CITEseq_LNP_pIC_LNPs",
   "VBO011" = "CITEseq_LNP_CpG",
   "VBO012" = "CITEseq_LNP_pIC",
   "JVE008" = "CITEseq_Toxo",
@@ -124,7 +135,7 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               # Must mqtch Normalization method
                               normalization.method = "LogNormalize",
                               dims=1:40,
-                              dims.to.integrate = 40,
+                              dims.to.integrate = 1:40,
                               verbose = TRUE)
 )
 seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
@@ -136,25 +147,31 @@ DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "CCA
 #######################################################################""
 #SCORING
 
+#Benchmqrk results, result and memory are object themself qand cause errors
+
+BenchResultData <- as.data.frame(BenchResult)
+BenchResultData <- BenchResultData[,!names(BenchResultData) %in% c("result", "memory","expression","gc")]
+BenchResultData <- as.data.frame(BenchResultData)
+
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
 
 KbetScore <- ScoreKBET(seuratObjT,
-                       batch.var = "orig.ident",
+                       batch.var = "treatment",
                        cell.var = "sctype_classification",
-                       what = "harmony")
+                       what = "integrated.cca")
 
 KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
 LisiCelltype <- ScoreLISI(seuratObjT,
-                          integration = "harmony",
+                          integration = "integrated.cca",
                           reduction = "RNA_pca_int",
                           cell.var = "sctype_classification")
 
 ## LISIi Batch mixing
 LisiBatch <- ScoreLISI(seuratObjT,
-                       integration = "harmony",
+                       integration = "integrated.cca",
                        reduction = "RNA_pca_int",
                        batch.var = "treatment")
 
@@ -189,12 +206,20 @@ LisiResults<- data.frame(
 
 # AWS
 ASWScore  <- ScoreASW(seuratObjT,
-                      what = "harmony",
+                      # what = "integrated.cca",
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
 
+###################################
+# Set output
+setwd(output)
+###################################
+
 wb <- createWorkbook()
+
+addWorksheet(wb, "Benchmark")
+writeData(wb, "Benchmark", BenchResultData)
 
 addWorksheet(wb, "KBET")
 writeData(wb, "KBET", KbetData)
@@ -211,19 +236,19 @@ writeData(wb, "ASW", ASWData)
 # Save Excel file
 saveWorkbook(
   wb,
-  file = "Integration_Scoring_Results.xlsx",
+  file = "./CCA/Results/Integration_Scoring_Results_treatment.xlsx",
   overwrite = TRUE
 )
 
 ##############################"
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration", width = 10,height =8)
+pdf("./CCA/Results/Graphs_CCA_Integration_treatment", width = 10,height =8)
 for (i in Plotslist){
   
-  AnnotTitle <- paste0("Plot Harmony integration: ",i)
+  AnnotTitle <- paste0("Plot CCA integration: ",i)
   print(AnnotTitle)
-  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "CCA_umap")
   p_combined <- p + plot_annotation(title = AnnotTitle)
   
   print(p_combined)
@@ -231,3 +256,4 @@ for (i in Plotslist){
 }
 dev.off()
 
+saveRDS(seuratObjT,"./CCA/Objects/SeurqtObjT_CCA_treatment.rds")

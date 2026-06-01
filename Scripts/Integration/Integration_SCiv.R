@@ -1,6 +1,8 @@
 
 
-
+library(reticulate)
+use_condaenv("Integration", required = TRUE)
+py_config()
 library("renv")
 library("Seurat")
 library("patchwork")
@@ -11,7 +13,7 @@ library("SeuratIntegrate")
 library("bench")
 library("kBET")
 library("openxlsx")
-
+library("reticulate")
 #if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
 #BiocManager::install("anndataR")
 #library("anndataR")
@@ -47,6 +49,18 @@ for (i in DataList){
 
 rm(tmp)
 gc()
+###################################33
+# fix error
+# The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
+# issue by renaming the sctype based on Annotation_VBO 
+
+# Late mature cDC1s ??? Migratory dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Late mature cDC1s"] <- "Migratory dendritic cells 1"
+
+# Early mature cDC1s ??? Dendritic cells 1
+seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Early mature cDC1s"] <- " Dendritic cells 1"
+
+########################################
 #################################################################
 # Adding Metadata
 experiment_map <- c(
@@ -105,6 +119,8 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.name = "RNA_pca_int",
                      reduction.key = "rnaPC_int_")
 ####################################
+use_condaenv("Integration", required = TRUE)
+
 BenchResult <- bench::mark(
 seuratObjT <- IntegrateLayers(object = seuratObjT,
                               method = scVIIntegration,
@@ -113,9 +129,9 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               n_hidden=256,
                               ndims.out= 40,
                               orig.reduction = "RNA_pca_int",
-                              new.reduction = "scvi", 
+                              new.reduction = "scvi",
                               conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
-                              batch_key = "treatment",
+                              batch_key = "orig.ident",
                               verbose=TRUE
                               )
 )
@@ -248,24 +264,24 @@ dev.off()
 #DimPlot(seuratObjT,label = T,group.by = "treatment",reduction = "harmony_umap")
 #
 ###################################################################
-#ERROR CODE 
-#library("reticulate")
-#library("sceasy")
-#library("SingleCellExperiment")
-#library("zellkonverter")
-#install_miniconda()
-#conda_list()
-#conda_create("Integration", python_version = "3.11")
-#conda_install(
+# ERROR CODE
+# library("reticulate")
+# library("sceasy")
+# library("SingleCellExperiment")
+# library("zellkonverter")
+# # install_miniconda()
+# conda_list()
+# conda_create("Integration", python_version = "3.11")
+# conda_install(
 #  envname = "Integration",
 #  packages = c("scvi-tools"),
 #  pip = TRUE
-#)
-#use_condaenv("Integration", required = TRUE)
-#reticulate::conda_install(
+# )
+# use_condaenv("Integration", required = TRUE)
+# reticulate::conda_install(
 #  envname = "Integration",
 #  packages = "Numpy >= 1.6"
-#)
+# )
 #sc <- import("scanpy", convert = FALSE)
 #scvi <- import("scvi", convert = FALSE)
 #py_config()

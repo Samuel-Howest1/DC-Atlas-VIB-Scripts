@@ -1,14 +1,9 @@
 
-
-
-
-
 library("renv")
 library("Seurat")
 library("patchwork")
 library("harmony")
 library("readxl")
-library("presto")
 library("SeuratIntegrate")
 library("bench")
 library("kBET")
@@ -22,34 +17,34 @@ library("openxlsx")
 output <- "/srv/data/local/samuelg/Output"
 seuratObjT <- readRDS("Subset_Merged_seurat500.rds")
 ###################################################################
-folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
-DataList <- list.files(folder)
+#folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
+#DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
-DataList <- DataList[-8]
+#DataList <- DataList[-8]
 
 #Test Only JVE
-DataList <- DataList[c(1:2,10:11)]
-start <- 1
+#DataList <- DataList[c(1:2,10:11)]
+#start <- 1
 #Only CDC1
-for (i in DataList){
-  print(i)
-  #Starting seuratobject
-  if (start == 1){
-    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #    seuratObjT <- seuratObjT
-    start <- start + 1
-    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
-    seuratObjT$orig.ident <- i
-  }
-  
-  else{
+#for (i in DataList){
+#  print(i)
+#  #Starting seuratobject
+#  if (start == 1){
+#    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#    #    seuratObjT <- seuratObjT
+#    start <- start + 1
+#    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
+#    seuratObjT$orig.ident <- i
+#  }
+#  
+#  else{
     tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
     #  tmp <- tmp[,1:500] 
     tmp$orig.ident <- i
     colnames(tmp)<- paste0(colnames(tmp),"_",i)
     seuratObjT <- merge(seuratObjT,tmp)
   }
-}
+#}
 ###################################33
 # fix error
 # The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
@@ -137,7 +132,7 @@ seuratObjT <- RunHarmony(seuratObjT,
                          theta=c(2,2),
                          sigma=0.2,
                          lambda=1,
-                         verbose=TRUE)
+                         verbose=TRUE),memory = F
 )
 # Reduce max.itration?
 # Specific number of cluster?
@@ -196,8 +191,7 @@ batch_stats <- c(
   Mean = mean(LisiBatch$treatment),
   quantile(LisiBatch$treatment),
   table(cut(LisiBatch$treatment, breaks = 4)))
-  
-###################################
+#######################################
 #LISI RESULT DATAFRAME
 
 
@@ -215,6 +209,11 @@ ASWScore  <- ScoreASW(seuratObjT,
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
+
+###################################
+# Set output
+setwd(output)
+###################################
 
 wb <- createWorkbook()
 
@@ -243,10 +242,10 @@ saveWorkbook(
 ##############################"
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration2", width = 10,height = 8)
+pdf("./Harmomy/Results/Graphs_Harmony_Integration", width = 10,height = 8)
 for (i in Plotslist){
 
-    AnnotTitle <- paste0("Plot Harmony integration2: ",i)
+    AnnotTitle <- paste0("Plot Harmony integration: ",i)
     print(AnnotTitle)
     
     p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
@@ -257,5 +256,4 @@ for (i in Plotslist){
 }
 dev.off()
 
-setwd(output)
-saveRDS(seuratObjT,"SeurqtObjT_Harmomy_Subset.rds")
+saveRDS(seuratObjT,"./Harmomy/Object/SeurqtObjT_Harmomy_Subset.rds")
