@@ -112,7 +112,6 @@ tags$head(
                 placeholder = 'Type a gene...',
                 create = TRUE   # allows typing custom values
               )),
-            verbatimTextOutput("selected_gene")
             ),
             
             tags$div(
@@ -146,7 +145,6 @@ tags$head(
               placeholder = 'Type a gene...',
               create = TRUE   # allows typing custom values
               )),
-            verbatimTextOutput("selected_metadata")
             ),
             
             tags$div(
@@ -183,7 +181,6 @@ nav_panel(title = "Gene Comparison",
                         placeholder = 'Type a gene...',
                         create = TRUE   # allows typing custom values
                       )),
-                    verbatimTextOutput("selected_metadata")
           ),
           
           tags$div(
