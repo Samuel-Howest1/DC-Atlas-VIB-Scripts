@@ -242,7 +242,8 @@ layout_columns(
 
             ),
             
-           
+            plotlyOutput("metaplot", height = "700px",width = "700px")
+            
             # 
             # tags$div(
             #   plotOutput("Dimplot", height = "700px",width = "700px")
@@ -390,14 +391,27 @@ server <- function(input, output) {
   })
   
 #################################################################################
-    output$meta <- renderPlot({
+    output$metaplot <- renderPlotly({
+      
+      req(input$meta)
+      
+      expr_val <-  as.numeric(expr[input$meta, ])
+      # Celltype
+      cell <- meta$sctype_classification
+      
+      # Table for plotting
+      df <- data.frame(
+        UMAP_1 = umap[, "harmonyumap_1"],
+        UMAP_2 = umap[, "harmonyumap_2"],
+        expr = expr_val
+      )
       
       df$Exp <- meta$experiment
       df$WT <- meta$treatment
       
       
       df_Filter_WT <- df[df$WT == "WT",]
-      plot_ly(
+      p1 <-plot_ly(
         df_Filter_WT,
         x = ~UMAP_1,
         y = ~UMAP_2,
@@ -411,7 +425,7 @@ server <- function(input, output) {
       )
       
       df_Filter_Test <- df[df$WT == "Test",]
-      plot_ly(
+      p2 <- plot_ly(
         df_Filter_Test,
         x = ~UMAP_1,
         y = ~UMAP_2,
@@ -423,7 +437,11 @@ server <- function(input, output) {
         hoverinfo= "text",
         marker = list(size = 3)
       )
-
+      subplot(
+        p1,
+        p2,
+        nrows = 1
+      )
     })
   
   
