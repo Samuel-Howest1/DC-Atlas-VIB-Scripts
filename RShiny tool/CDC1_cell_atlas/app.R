@@ -232,17 +232,17 @@ layout_columns(
             selectizeInput(
               inputId = "meta",
               label = "Select Label for metadata",
-              choices = metadata,
+              choices = genes,
               selected = NULL,
-              multiple = TRUE,
+              multiple = F,
               options = list(
               placeholder = 'Type a gene...',
               create = TRUE   # allows typing custom values
               )),
+
             ),
             
-            actionButton("start", "Create Plots"),
-            uiOutput("multi_plots")
+           
             # 
             # tags$div(
             #   plotOutput("Dimplot", height = "700px",width = "700px")
@@ -390,79 +390,42 @@ server <- function(input, output) {
   })
   
 #################################################################################
-  plot_data <- eventReactive(input$start, {
-    
-    req(input$group_gene)
-    req(length(input$groups) > 0)
-    
-    list(
-      umap = umap,
-      expr = expr_val,
-      groups = input$groups
-    )
-  })
-  
-  observeEvent(input$go, {
-    
-    data <- plot_data()
-    
-    lapply(data$groups, function(group_var) {
+    output$meta <- renderPlot({
       
-      output[[paste0("plot_", group_var)]] <- renderPlotly({
-        
-        df <- data.frame(
-          UMAP_1 = data$umap[,1],
-          UMAP_2 = data$umap[,2],
-          expr = data$expr,
-          group = SeuratObjT[[group_var]][,1]
-        )
-        
-        plot_ly(
-          df,
-          x = ~UMAP_1,
-          y = ~UMAP_2,
-          color = ~group,
-          type = "scattergl",
-          mode = "markers",
-          marker = list(size = 3)
-        )})})})
-  observeEvent(input$start, {
-    
-    data <- plot_data()
-    
-    lapply(data$groups, function(group_var) {
+      df$Exp <- meta$experiment
+      df$WT <- meta$treatment
       
-      output[[paste0("plot_", group_var)]] <- renderPlotly({
-        
-        df <- data.frame(
-          UMAP_1 = data$umap[,1],
-          UMAP_2 = data$umap[,2],
-          expr = data$expr,
-          group = SeuratObjT[[group_var]][,1]
-        )
-        
-        plot_ly(
-          df,
-          x = ~UMAP_1,
-          y = ~UMAP_2,
-          color = ~group,
-          type = "scattergl",
-          mode = "markers",
-          marker = list(size = 3)
-        )
-      })
+      
+      df_Filter_WT <- df[df$WT == "WT",]
+      plot_ly(
+        df_Filter_WT,
+        x = ~UMAP_1,
+        y = ~UMAP_2,
+        color = ~expr,
+        type = "scattergl",
+        mode = "markers",
+        text = ~hover,
+        #Removing Coordintates
+        hoverinfo= "text",
+        marker = list(size = 3)
+      )
+      
+      df_Filter_Test <- df[df$WT == "Test",]
+      plot_ly(
+        df_Filter_Test,
+        x = ~UMAP_1,
+        y = ~UMAP_2,
+        color = ~expr,
+        type = "scattergl",
+        mode = "markers",
+        text = ~hover,
+        #Removing Coordintates
+        hoverinfo= "text",
+        marker = list(size = 3)
+      )
+
     })
-  })
   
-  
-  output$multi_plots <- renderUI({
-    
-    req(input$go)
-    
-    lapply(input$groups, function(g) {
-      plotlyOutput(paste0("plot_", g), height = "400px")
-    })
-  })
   
 #################################################################################
 # ADD COUNT OF HOW MANY CELL PER GENE
