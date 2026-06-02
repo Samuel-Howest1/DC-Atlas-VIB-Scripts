@@ -17,15 +17,21 @@ library(shinyWidgets)
 library(DT)
 
 
-SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/SAM2/Post-process/SeuratObj_Post-Process_CDC1_SAM2.rds")
+SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
-
-expr_mat <- GetAssayData(SeuratObjT,layer = "data")
 # List of Genes
 # genes <- rownames(SeuratObjT)
 genes <- c("Test","Ccr7","Cd81")
-condition <- SeuratObjT@meta.data$orig.ident
+condition <- unique(SeuratObjT@meta.data$orig.ident)
 
+vis_data <- list(
+  umap = SeuratObjT@reductions$harmony_umap@cell.embeddings,
+  meta = SeuratObjT@meta.data,
+  expr = GetAssayData(SeuratObjT,assay = "RNA",layer = "data"))
+
+umap <- vis_data$umap
+meta <- vis_data$meta
+expr <- vis_data$expr
 
 #ListMetadata
 metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
@@ -318,20 +324,21 @@ server <- function(input, output) {
     
     req(input$gene)
     
-    # Cell coordinetes
-    umap <- SeuratObjT@reductions$harmony_umap@cell.embeddings
+    # Cell coordinetes (already created)
+    # umap <- SeuratObjT@reductions$harmony_umap@cell.embeddings
+    
     # Gene 
-    expr <-  as.numeric(expr_mat[input$gene, ])
+    expr_val <-  as.numeric(expr[input$gene, ])
     # Celltype
-    cell <- 
+    cell <- meta$sctype_classification
     
     # Table for plotting
     df <- data.frame(
-      UMAP_1 = umap[, "RNAumap_1"],
-      UMAP_2 = umap[, "RNAumap_2"],
-      expr = expr[, 1]
+      UMAP_1 = umap[, "harmonyumap_1"],
+      UMAP_2 = umap[, "harmonyumap_2"],
+      expr = expr_val[, 1]
     )
-    df$Celltype <- SeuratObjT$sctype_classification
+    df$Celltype <- meta$sctype_classification
     # To male Hover Text of cells
     df$hover <- paste(
       rownames(df),
@@ -384,7 +391,7 @@ server <- function(input, output) {
     FeatureScatter(
       SeuratObjT,
       feature1 = input$gene_1,
-      feature2 = input$gene_2,
+      feature2 = input$gene_2
     )
   })
   
