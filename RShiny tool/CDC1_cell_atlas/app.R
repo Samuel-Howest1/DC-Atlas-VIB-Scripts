@@ -18,13 +18,9 @@ library(DT)
 
 
 SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/SAM2/Post-process/SeuratObj_Post-Process_CDC1_SAM2.rds")
-SeuratObjT <- DietSeurat(SeuratObjT,
-              counts = FALSE,
-              data = TRUE,
-              scale.data = FALSE,
-              assays = "RNA",
-              dimreducs = c("RNA_umap")
-)
+SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
+
+expr_mat <- GetAssayData(SeuratObjT,layer = "data")
 # List of Genes
 # genes <- rownames(SeuratObjT)
 genes <- c("Test","Ccr7","Cd81")
@@ -323,9 +319,9 @@ server <- function(input, output) {
     req(input$gene)
     
     # Cell coordinetes
-    umap <- SeuratObjT@reductions$RNA_umap@cell.embeddings
+    umap <- SeuratObjT@reductions$harmony_umap@cell.embeddings
     # Gene 
-    expr <- FetchData(SeuratObjT, vars = input$gene)
+    expr <-  as.numeric(expr_mat[input$gene, ])
     # Celltype
     cell <- 
     
@@ -349,7 +345,7 @@ server <- function(input, output) {
       x = ~UMAP_1,
       y = ~UMAP_2,
       color = ~expr,
-      type = "scatter",
+      type = "scattergl",
       mode = "markers",
       text = ~hover,
       #Removing Coordintates
