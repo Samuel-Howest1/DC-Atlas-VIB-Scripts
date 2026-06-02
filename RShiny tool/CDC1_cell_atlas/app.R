@@ -242,7 +242,7 @@ layout_columns(
 
             ),
             
-            plotlyOutput("metaplot", height = "700px",width = "700px")
+            plotlyOutput("metaplot", height = "1000px",width = "1000px")
             
             # 
             # tags$div(
@@ -418,9 +418,6 @@ server <- function(input, output) {
         color = ~expr,
         type = "scattergl",
         mode = "markers",
-        text = ~hover,
-        #Removing Coordintates
-        hoverinfo= "text",
         marker = list(size = 3)
       )
       
@@ -432,14 +429,23 @@ server <- function(input, output) {
         color = ~expr,
         type = "scattergl",
         mode = "markers",
-        text = ~hover,
-        #Removing Coordintates
-        hoverinfo= "text",
+        marker = list(size = 3)
+      )
+      
+      df_Filter_JVE <- df[df$Exp == "CITEseq_Toxo",]
+      p3 <- plot_ly(
+        df_Filter_JVE,
+        x = ~UMAP_1,
+        y = ~UMAP_2,
+        color = ~expr,
+        type = "scattergl",
+        mode = "markers",
         marker = list(size = 3)
       )
       subplot(
         p1,
         p2,
+        p3,
         nrows = 1
       )
     })
