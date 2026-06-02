@@ -13,8 +13,29 @@ SeuratObjVis <- DietSeurat(
   dimreducs = "umap",
   graphs = NULL)
 
+Layers(SeuratObjT[["RNA"]])
+
+scale_layers <- grep(
+  "^scale.data",
+  Layers(SeuratObjT[["RNA"]]),
+  value = TRUE
+)
+
+for (layer in scale_layers) {
+  LayerData(SeuratObjT[["RNA"]], layer) <- NULL
+}
 
 
+sapply(
+  scale_layers,
+  function(x)
+    format(
+      object.size(
+        LayerData(SeuratObjT[["RNA"]], x)
+      ),
+      units = "GB"
+    )
+)
 
 
 
