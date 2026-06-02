@@ -5,39 +5,29 @@
 # Thus reducing its size and increasing loading speed for the Rshiny Tool
 
 
-SeuratObjVis <- readRDS("/Users/samue/Desktop/")
+SeuratObjVis <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Harmomy_Treat_Exp.rds")
 
 SeuratObjVis <- DietSeurat(
-  obj,
-  assays = "RNA",
-  dimreducs = "umap",
+  SeuratObjVis,
+  assays = c("RNA","HTO"),
+  scale.data = FALSE,
+  dimreducs = "harmony_umap",
   graphs = NULL)
 
-Layers(SeuratObjT[["RNA"]])
+Layers(SeuratObjVis[["RNA"]])
 
-scale_layers <- grep(
-  "^scale.data",
-  Layers(SeuratObjT[["RNA"]]),
-  value = TRUE
-)
-
-for (layer in scale_layers) {
-  LayerData(SeuratObjT[["RNA"]], layer) <- NULL
-}
+scale_layers <- grep("^scale.data",Layers(SeuratObjVis[["RNA"]]),value = TRUE)
 
 
 sapply(
   scale_layers,
   function(x)
-    format(
-      object.size(
-        LayerData(SeuratObjT[["RNA"]], x)
-      ),
-      units = "GB"
-    )
-)
+    format(object.size(LayerData(SeuratObjVis[["RNA"]], x)),units = "GB")
+  )
+
+for (layer in scale_layers) {LayerData(SeuratObjVis[["RNA"]], layer) <- NULL}
 
 
-
+saveRDS(SeuratObjVis,"/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 
 
