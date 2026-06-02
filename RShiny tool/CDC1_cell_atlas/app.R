@@ -241,7 +241,8 @@ layout_columns(
               )),
             ),
             
-            actionButton("start", "Create Plots")
+            actionButton("start", "Create Plots"),
+            uiOutput("multi_plots")
             # 
             # tags$div(
             #   plotOutput("Dimplot", height = "700px",width = "700px")
@@ -389,10 +390,79 @@ server <- function(input, output) {
   })
   
 #################################################################################
-  output$Dimplot <- renderPlot({
-    DimPlot(SeuratObjT, group.by = input$meta)
+  plot_data <- eventReactive(input$start, {
     
-  }) 
+    req(input$group_gene)
+    req(length(input$groups) > 0)
+    
+    list(
+      umap = umap,
+      expr = expr_val,
+      groups = input$groups
+    )
+  })
+  
+  observeEvent(input$go, {
+    
+    data <- plot_data()
+    
+    lapply(data$groups, function(group_var) {
+      
+      output[[paste0("plot_", group_var)]] <- renderPlotly({
+        
+        df <- data.frame(
+          UMAP_1 = data$umap[,1],
+          UMAP_2 = data$umap[,2],
+          expr = data$expr,
+          group = SeuratObjT[[group_var]][,1]
+        )
+        
+        plot_ly(
+          df,
+          x = ~UMAP_1,
+          y = ~UMAP_2,
+          color = ~group,
+          type = "scattergl",
+          mode = "markers",
+          marker = list(size = 3)
+        )})})})
+  observeEvent(input$start, {
+    
+    data <- plot_data()
+    
+    lapply(data$groups, function(group_var) {
+      
+      output[[paste0("plot_", group_var)]] <- renderPlotly({
+        
+        df <- data.frame(
+          UMAP_1 = data$umap[,1],
+          UMAP_2 = data$umap[,2],
+          expr = data$expr,
+          group = SeuratObjT[[group_var]][,1]
+        )
+        
+        plot_ly(
+          df,
+          x = ~UMAP_1,
+          y = ~UMAP_2,
+          color = ~group,
+          type = "scattergl",
+          mode = "markers",
+          marker = list(size = 3)
+        )
+      })
+    })
+  })
+  
+  
+  output$multi_plots <- renderUI({
+    
+    req(input$go)
+    
+    lapply(input$groups, function(g) {
+      plotlyOutput(paste0("plot_", g), height = "400px")
+    })
+  })
   
 #################################################################################
 # ADD COUNT OF HOW MANY CELL PER GENE
