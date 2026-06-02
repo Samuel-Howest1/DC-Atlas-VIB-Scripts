@@ -275,7 +275,7 @@ nav_panel(title = "Gene Comparison",
                         create = TRUE   # allows typing custom values
                       )),
           ),
-          
+           
           tags$div(
             plotOutput("Comparison", height = "700px",width = "700px")
           )
