@@ -17,9 +17,9 @@ library(shinyWidgets)
 library(DT)
 
 ################### Loading Objects #######################################
-SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Harmony_Treat_Exp_VIS.rds")
+SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
-
+Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
 
 ################### Creating List of of selection for plots #########
@@ -234,16 +234,18 @@ layout_columns(
               label = "Select Label for metadata",
               choices = metadata,
               selected = NULL,
-              multiple = FALSE,
+              multiple = TRUE,
               options = list(
               placeholder = 'Type a gene...',
               create = TRUE   # allows typing custom values
               )),
             ),
             
-            tags$div(
-              plotOutput("Dimplot", height = "700px",width = "700px")
-            )
+            actionButton("start", "Create Plots")
+            # 
+            # tags$div(
+            #   plotOutput("Dimplot", height = "700px",width = "700px")
+            # )
   ),
 
 
@@ -304,11 +306,14 @@ nav_panel(title = "Contact",
   )
 )
 
-
+#####################################################################################
+############################      SERVER     ########################################
+#####################################################################################
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  
+
+######################################################################################
   #Home Table
   output$report_table <- renderTable(
     tbl,
@@ -319,6 +324,7 @@ server <- function(input, output) {
     sanitize.text.function = function(x) x
   )
   
+######################################################################################
   output$selected_gene <- renderPrint({input$gene})
   
   output$feature_plot <- renderPlotly({ 
@@ -337,7 +343,7 @@ server <- function(input, output) {
     df <- data.frame(
       UMAP_1 = umap[, "harmonyumap_1"],
       UMAP_2 = umap[, "harmonyumap_2"],
-      expr = expr_val[, 1]
+      expr = expr_val
     )
     df$Celltype <- meta$sctype_classification
     # To male Hover Text of cells
@@ -362,11 +368,6 @@ server <- function(input, output) {
     )
   })
   
-  output$Dimplot <- renderPlot({
-    DimPlot(SeuratObjT, group.by = input$meta)
-    
-  }) 
-  
   output$ViolinPlot <- renderPlot({
     
     req(input$gene)
@@ -377,16 +378,23 @@ server <- function(input, output) {
       pt.size = 0
     )
   })
-
+  
   # Info verbeter zodat het duielijkt is 
   output$DotPlot <- renderPlot({
-  DotPlot(
-    SeuratObjT,
-    features = genes,
-    group.by = "sctype_classification"
-  )
+    DotPlot(
+      SeuratObjT,
+      features = genes,
+      group.by = "sctype_classification"
+    )
   })
   
+#################################################################################
+  output$Dimplot <- renderPlot({
+    DimPlot(SeuratObjT, group.by = input$meta)
+    
+  }) 
+  
+#################################################################################
 # ADD COUNT OF HOW MANY CELL PER GENE
   output$Comparison <- renderPlot({
     FeatureScatter(
