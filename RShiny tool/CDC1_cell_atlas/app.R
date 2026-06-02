@@ -16,14 +16,19 @@ library(bootstrap)
 library(shinyWidgets)
 library(DT)
 
-
+################### Loading Objects #######################################
 SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
-# List of Genes
+
+################################################################################
+
+################### Creating List of of selection for plots #########
 # genes <- rownames(SeuratObjT)
 genes <- c("Test","Ccr7","Cd81")
 condition <- unique(SeuratObjT@meta.data$orig.ident)
-
+metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
+################################################################################
+##################### Spliting up the data for improved speed #################
 vis_data <- list(
   umap = SeuratObjT@reductions$harmony_umap@cell.embeddings,
   meta = SeuratObjT@meta.data,
@@ -33,12 +38,8 @@ umap <- vis_data$umap
 meta <- vis_data$meta
 expr <- vis_data$expr
 
-#ListMetadata
-metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
-# Define UI for application that draws a histogram
-
-
-# Info Table | Home Page
+##############################################################################
+########################### Info Table | Home Page ###########################
 # X-axis (columns)
 report_cols <-c(
     "JVE008", "JVE010", "SAM016",
@@ -88,15 +89,15 @@ tbl <- data.frame(
     dimnames = list(NULL, report_cols)
   ),
   check.names = FALSE)
-
-############## Base of UI #############################
+##############################################################################
+############## Base of UI ###################################################
 ui <-  page_navbar(theme = shinytheme("united"),
   title = img(src="irc_logo_transparant.png",  
               height = "30px"),
   bg = "#8EE5EE",
   inverse = TRUE,
 
-############ CCS style #######################
+############ CCS style ###################################################
 tags$head(
   tags$style(HTML("
             .Title{
