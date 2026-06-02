@@ -8,10 +8,14 @@
 #
 
 library(shiny)
-library(bslib)
 library(shinythemes)
 library("Seurat")
 library("plotly")
+library(bslib)
+library(bootstrap)
+library(shinyWidgets)
+library(DT)
+
 
 SeuratObjT <- readRDS("C:/Users/samue/Desktop/Stage VIB/Pre and Post processing Results/SAM2/Post-process/SeuratObj_Post-Process_CDC1_SAM2.rds")
 SeuratObjT <- DietSeurat(SeuratObjT,
@@ -22,12 +26,66 @@ SeuratObjT <- DietSeurat(SeuratObjT,
               dimreducs = c("RNA_umap")
 )
 # List of Genes
-genes <- rownames(SeuratObjT)
-#genes <- c("Test","Ccr7","Cd81")
+# genes <- rownames(SeuratObjT)
+genes <- c("Test","Ccr7","Cd81")
+condition <- SeuratObjT@meta.data$orig.ident
+
 
 #ListMetadata
 metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
 # Define UI for application that draws a histogram
+
+
+# Info Table | Home Page
+# X-axis (columns)
+report_cols <-c(
+    "JVE008", "JVE010", "SAM016",
+    "SAM05", "SAM06", "SAM2",
+    "SAM3", "VBO004", "VBO005",
+    "VBO006", "VBO007", "VBO008",
+    "VBO009", "VBO010", "VBO011",
+    "VBO012"
+  )
+experiment_map <- c(
+  "CITEseq_Test",
+  "CITEseq_Test",
+  "CITEseq_Final",
+  "CITEseq_Final",
+  "CITEseq_Notch",
+  "CITEseq_LNP_WT",
+  "CITEseq_LNP_eLNPs",
+  "CITEseq_LNP_pIC_LNPs",
+  "CITEseq_LNP_CpG",
+  "CITEseq_LNP_pIC",
+  "CITEseq_LNP_eLNPs",
+  "CITEseq_LNP_pIC_LNPs",
+  "CITEseq_LNP_CpG",
+  "CITEseq_LNP_pIC",
+  "CITEseq_Toxo",
+  "CITEseq_Toxo"
+)
+# Y-axis (rows)
+conditions <- c(as.character(
+  tags$div(
+    tags$img(src = "Orig_idents.png", height = "30px")," Orig.idents"
+    )),
+  as.character(
+    tags$div(tags$img(src = "mouse_icon.png", height = "30px"),
+      " Treatment")),
+  as.character(
+    tags$div(
+      tags$img(src = "lab.png", height = "30px")," Experiment"
+    ))
+)
+tbl <- data.frame(
+  Condition = conditions,
+  matrix(
+    "",
+    nrow = length(conditions),
+    ncol = length(report_cols),
+    dimnames = list(NULL, report_cols)
+  ),
+  check.names = FALSE)
 
 ############## Base of UI #############################
 ui <-  page_navbar(theme = shinytheme("united"),
@@ -47,28 +105,32 @@ tags$head(
               font-family: sans-serif;
             }
          .card{
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  height: 700px;
-
-  margin: 2em auto;
-  padding: 1em;
-
-  overflow: hidden;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.card .plotly {
-  flex: 1;
-  min-height: 0;
-}
-            .input{
-              position:relative;
-              padding: 2em;
+              position: relative;
+              width: 100%;
+              max-width: 800px;
+              height: 700px;
               margin: 2em auto;
+              padding: 1em;
+              overflow: vissible;
+              display: flex;
+              flex-direction: column;
+         }
+         
+        .table{
+              width: 1200px;
+              margin-left:0px;
+        }
+
+        .card .plotly {
+              flex: 1;
+              min-height: 0;
+        }
+
+        .input{
+            position:relative;
+            width: 100%;
+            padding: 2em;
+            margin: 2em auto;
             
             }
             
@@ -79,29 +141,31 @@ tags$head(
   nav_panel(title = "Home",
       tags$div(
         class = "Title",
-        "Home"
+        h1("Home")
       ),
       
-      tags$div( class= "card",
+      tags$div(
           p("This is cell atlas for CDC1 based on these Datasets:"),
           
       p("CITEseq_Test: SAM2 and SAM3",tags$br(),
       "CITEseq_Final: SAM05 and SAM06",tags$br(),
       "CITEseq_Notch: SAM016\n",       tags$br(),
       "CITEseq_LNP: VBO004-VBO012\n",  tags$br(),
-      "CITEseq_Toxo: JVE008 JVE010.") )
+      "CITEseq_Toxo: JVE008 JVE010.")),
+      
+      div(class ="table",
+        tableOutput("report_table")
+      )
   ),
  
 ##################################################################
 ############## Feature Plot Page ################################
   nav_panel(title = "Gene plots",
-            layout_column_wrap(
-              width = 1/2,
-        card(
+# ------------------ Selectors -----------------------------------
+card(
+          max_height = "150px",
             p("Select gene for feature plot."),
-            
-            tags$div( class = "input",
-                      
+layout_columns(              
             selectizeInput(
               inputId = "gene",
               label = "Select or type a gene",
@@ -110,16 +174,42 @@ tags$head(
               multiple = FALSE,
               options = list(
                 placeholder = 'Type a gene...',
-                create = TRUE   # allows typing custom values
+                create = TRUE,   # allows typing custom values
+                dropdownParent = "body"
               )),
-            verbatimTextOutput("selected_gene")
-            ),
-            
-            tags$div(
-              plotlyOutput("feature_plot", height = "700px",width = "700px")
-            )
+            selectizeInput(
+              inputId = "cond",
+              label = "Select or type a gene",
+              choices = condition,
+              selected = NULL,
+              multiple = TRUE,
+              options = list(
+                placeholder = 'Type a gene...',
+                create = TRUE,   # allows typing custom values
+                dropdownParent = "body"
+              ),)
+
+            # radioButtons(
+            #   inputId = "cond",
+            #   label = "Condition",
+            #   choices = c(
+            #     "Orig.idebts" = "orig",
+            #     "Treatment" = "treat",
+            #     "WT Only" = "wt"
+            #   ),
+            #   selected = "orig",
+            #   inline = TRUE
+            # )
+          ,col_widths = c(6, 6))
+),
+
+# ------------------------------------------------------------------
+
+  layout_columns(
+          
+        card(  
+          plotlyOutput("feature_plot", height = "700px",width = "700px")
           ),
-        
         card(
             card_header("Violin Plot"),
             plotOutput("ViolinPlot", height = "700px"),
@@ -127,7 +217,7 @@ tags$head(
             plotOutput("DotPlot", height = "700px")
             
           )
-          )
+          ),col_widths = c(8, 4)
         ),
   
 #############################################################################
@@ -146,7 +236,6 @@ tags$head(
               placeholder = 'Type a gene...',
               create = TRUE   # allows typing custom values
               )),
-            verbatimTextOutput("selected_metadata")
             ),
             
             tags$div(
@@ -183,7 +272,6 @@ nav_panel(title = "Gene Comparison",
                         placeholder = 'Type a gene...',
                         create = TRUE   # allows typing custom values
                       )),
-                    verbatimTextOutput("selected_metadata")
           ),
           
           tags$div(
@@ -216,7 +304,18 @@ nav_panel(title = "Contact",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
+  
+  
+  #Home Table
+  output$report_table <- renderTable(
+    tbl,
+    striped = TRUE,
+    bordered = TRUE,
+    spacing = "s",
+    # Makes it so that text within the table will also be treated as a html elements
+    sanitize.text.function = function(x) x
+  )
+  
   output$selected_gene <- renderPrint({input$gene})
   
   output$feature_plot <- renderPlotly({ 
@@ -272,14 +371,14 @@ server <- function(input, output) {
       SeuratObjT,
       features = input$gene,
       pt.size = 0
-    )+ theme_dark()
+    )
   })
 
   # Info verbeter zodat het duielijkt is 
   output$DotPlot <- renderPlot({
   DotPlot(
     SeuratObjT,
-    features = input$gene,
+    features = genes,
     group.by = "sctype_classification"
   )
   })
