@@ -20,10 +20,8 @@ library("openxlsx")
 
 ####################################################################
 # for script
-#setwd("/srv/data/local/samuelg/")
-
-output <- "/srv/data/local/samuelg/Output"
-seuratObjT <- readRDS("SeuratObjT_Before_Integration_V2")
+output <- "/mnt/temp/srv/data/local/samuelg/Output/"
+seuratObjT <- readRDS("/mnt/temp/srv/data/local/samuelg/SeuratObjT_Before_Integration_V2")
 ###################################################################
 #folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 #DataList <- list.files(folder)
@@ -142,7 +140,27 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "integrated.cca",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "integrated.cca",dims = 1:40,reduction.name = "CCA_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "CCA_umap")
+
+###################################
+# Set output
+setwd(output)
+###################################
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("./CCA/Results/Graphs_CCA_Integration_treatment", width = 10,height =8)
+for (i in Plotslist){
+  
+  AnnotTitle <- paste0("Plot CCA integration: ",i)
+  print(AnnotTitle)
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "CCA_umap")
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  print(p_combined)
+  
+}
+dev.off()
+
+saveRDS(seuratObjT,"./CCA/Objects/SeurqtObjT_CCA_treatment.rds")
 
 #######################################################################""
 #SCORING
@@ -154,13 +172,13 @@ BenchResultData <- BenchResultData[,!names(BenchResultData) %in% c("result", "me
 BenchResultData <- as.data.frame(BenchResultData)
 
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
-
-KbetScore <- ScoreKBET(seuratObjT,
-                       batch.var = "treatment",
-                       cell.var = "sctype_classification",
-                       what = "integrated.cca")
-
-KbetData <- as.data.frame(KbetScore)
+# 
+# KbetScore <- ScoreKBET(seuratObjT,
+#                        batch.var = "treatment",
+#                        cell.var = "sctype_classification",
+#                        what = "integrated.cca")
+# 
+# KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
@@ -211,18 +229,14 @@ ASWScore  <- ScoreASW(seuratObjT,
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
 
-###################################
-# Set output
-setwd(output)
-###################################
 
 wb <- createWorkbook()
 
 addWorksheet(wb, "Benchmark")
 writeData(wb, "Benchmark", BenchResultData)
-
-addWorksheet(wb, "KBET")
-writeData(wb, "KBET", KbetData)
+# 
+# addWorksheet(wb, "KBET")
+# writeData(wb, "KBET", KbetData)
 
 addWorksheet(wb, "LISI_Raw")
 writeData(wb, "LISI_Raw", LisiData)
@@ -240,20 +254,3 @@ saveWorkbook(
   overwrite = TRUE
 )
 
-##############################"
-# Plots pdf
-Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("./CCA/Results/Graphs_CCA_Integration_treatment", width = 10,height =8)
-for (i in Plotslist){
-  
-  AnnotTitle <- paste0("Plot CCA integration: ",i)
-  print(AnnotTitle)
-  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "CCA_umap")
-  p_combined <- p + plot_annotation(title = AnnotTitle)
-  
-  print(p_combined)
-  
-}
-dev.off()
-
-saveRDS(seuratObjT,"./CCA/Objects/SeurqtObjT_CCA_treatment.rds")

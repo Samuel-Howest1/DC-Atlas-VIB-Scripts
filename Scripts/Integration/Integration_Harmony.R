@@ -12,10 +12,9 @@ library("openxlsx")
 #remotes::install_github("theislab/kBET")
 ####################################################################
 # for script
-#setwd(/srv/data/local/samuelg/)
 
-output <- "/srv/data/local/samuelg/Output"
-seuratObjT <- readRDS("Subset_Merged_seurat500.rds")
+output <- "/mnt/temp/srv/data/local/samuelg/Output/"
+seuratObjT <- readRDS("/mnt/temp/srv/data/local/samuelg/SeuratObjT_Before_Integration_V2")
 ###################################################################
 #folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 #DataList <- list.files(folder)
@@ -36,15 +35,15 @@ seuratObjT <- readRDS("Subset_Merged_seurat500.rds")
 #    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
 #    seuratObjT$orig.ident <- i
 #  }
-#  
-#  else{
-    tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #  tmp <- tmp[,1:500] 
-    tmp$orig.ident <- i
-    colnames(tmp)<- paste0(colnames(tmp),"_",i)
-    seuratObjT <- merge(seuratObjT,tmp)
-  }
-#}
+# #  
+# #  else{
+#     tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#     #  tmp <- tmp[,1:500] 
+#     tmp$orig.ident <- i
+#     colnames(tmp)<- paste0(colnames(tmp),"_",i)
+#     seuratObjT <- merge(seuratObjT,tmp)
+#   }
+# #}
 ###################################33
 # fix error
 # The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
@@ -58,8 +57,8 @@ seuratObjT@meta.data$sctype_classification[seuratObjT$Annotation_VBO == "Early m
 
 ########################################
 
-rm(tmp)
-gc()
+# rm(tmp)
+# gc()
 #################################################################
 # Adding Metadata
 experiment_map <- c(
@@ -142,7 +141,29 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40,reduction.name = "harmony_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "sctype_classification",reduction = "harmony_umap")
+
+###################################
+# Set output
+setwd(output)
+###################################
+
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("./Harmomy/Results/Graphs_Harmony_Integration", width = 10,height = 8)
+for (i in Plotslist){
+  
+  AnnotTitle <- paste0("Plot Harmony integration: ",i)
+  print(AnnotTitle)
+  
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  print(p_combined)
+  
+}
+dev.off()
+
+saveRDS(seuratObjT,"./Harmomy/Object/SeurqtObjT_Harmomy_Subset.rds")
 
                            
 #######################################################################""
@@ -155,12 +176,12 @@ BenchResultData <- BenchResultData[,!names(BenchResultData) %in% c("result", "me
 BenchResultData <- as.data.frame(BenchResultData)
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
 
-KbetScore <- ScoreKBET(seuratObjT,
-                       batch.var = "orig.ident",
-                       cell.var = "sctype_classification",
-                       what = "harmony")
-
-KbetData <- as.data.frame(KbetScore)
+# KbetScore <- ScoreKBET(seuratObjT,
+#                        batch.var = "orig.ident",
+#                        cell.var = "sctype_classification",
+#                        what = "harmony")
+# 
+# KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
@@ -210,18 +231,14 @@ ASWScore  <- ScoreASW(seuratObjT,
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
 
-###################################
-# Set output
-setwd(output)
-###################################
 
 wb <- createWorkbook()
 
 addWorksheet(wb, "Benchmark")
 writeData(wb, "Benchmark", BenchResultData)
 
-addWorksheet(wb, "KBET")
-writeData(wb, "KBET", KbetData)
+# addWorksheet(wb, "KBET")
+# writeData(wb, "KBET", KbetData)
 
 addWorksheet(wb, "LISI_Raw")
 writeData(wb, "LISI_Raw", LisiData)
@@ -235,25 +252,9 @@ writeData(wb, "ASW", ASWData)
 # Save Excel file
 saveWorkbook(
   wb,
-  file = "Integration_Scoring_Results.xlsx",
+  file = "./Harmomy/Results/Integration_Scoring_Results.xlsx",
   overwrite = TRUE
 )
 
 ##############################"
-# Plots pdf
-Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("./Harmomy/Results/Graphs_Harmony_Integration", width = 10,height = 8)
-for (i in Plotslist){
 
-    AnnotTitle <- paste0("Plot Harmony integration: ",i)
-    print(AnnotTitle)
-    
-    p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
-    p_combined <- p + plot_annotation(title = AnnotTitle)
-    
-    print(p_combined)
-  
-}
-dev.off()
-
-saveRDS(seuratObjT,"./Harmomy/Object/SeurqtObjT_Harmomy_Subset.rds")
