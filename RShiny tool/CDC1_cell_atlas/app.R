@@ -21,7 +21,6 @@ SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
 Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
-
 ################### Creating List of of selection for plots #########
 # genes <- rownames(SeuratObjT)
 genes <- c("Test","Ccr7","Cd81")
@@ -258,7 +257,7 @@ layout_columns(
               ),)
 
             ),
-            
+            actionButton("start", "Generate plots")
             withSpinner(
             plotlyOutput("metaplot", height = "1000px",width = "1000px")
             )
@@ -412,11 +411,7 @@ server <- function(input, output) {
 
   ########## Cell Metadata Start button ############   
   PlotNameList <-eventReactive(input$start,{
-    Count <- 1
-    for (i in input$cond) {
-    word <- strsplit(i,":")[[1]]
-    
-    }
+      list(input$cond)
   })
   
 -------------------------------------------------------------------------
@@ -437,10 +432,14 @@ server <- function(input, output) {
       
       df$Exp <- meta$experiment
       df$WT <- meta$treatment
+-------------------------------------------------------------------------------
+      PlotsList <- list()
       Count <- 1
       
-      for (i in PlotNameList){
-        df_Filter <- df[df == i,]
+      for (i in PlotNameList()){
+        word <- strsplit(i,":")[[2]]
+        column <- tolower(strsplit(i,":")[[1]])
+        df_Filter <- df[df$column == word,]
         p <-plot_ly(
             df_Filter,
             x = ~UMAP_1,
@@ -455,6 +454,8 @@ server <- function(input, output) {
 
       }
       
+      
+      subplot(PlotsList, shareX = TRUE, shareY = TRUE)
       # df_Filter_WT <- df[df$WT == "WT",]
       # p1 <-plot_ly(
       #   df_Filter_WT,
