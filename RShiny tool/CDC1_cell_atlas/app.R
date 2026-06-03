@@ -121,7 +121,7 @@ tags$head(
             .body {
               font-family: sans-serif;
             }
-         .card{
+            .card{
               position: relative;
               width: 100%;
               max-width: 800px;
@@ -133,23 +133,27 @@ tags$head(
               flex-direction: column;
          }
          
-        .table{
+            .table{
               width: 1200px;
               margin-left:0px;
         }
 
-        .card .plotly {
+          .card .plotly {
               flex: 1;
               min-height: 0;
         }
 
-        .input{
+          .input{
             position:relative;
             width: 100%;
             padding: 2em;
             margin: 2em auto;
             
-            }
+          }
+          .metaplots{
+          margin:50px;
+          padding; 50px;
+          }
             
                     "))
 ),
@@ -285,7 +289,7 @@ layout_columns(
             actionButton("start", "Generate plots"),
             
             withSpinner(
-            plotlyOutput("metaplot", height = "100%",width = "100%")
+            plotlyOutput("metaplot", height = "700px",width = "700px")
             )
             # 
             # tags$div(
