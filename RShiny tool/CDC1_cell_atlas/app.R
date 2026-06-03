@@ -257,6 +257,20 @@ layout_columns(
               ),)
 
             ),
+            radioButtons(
+              inputId = "colour_by",
+              label = "Colour by",
+              choices = c(
+                "Gene expression" = "gene",
+                "Cell type" = "celltype",
+                "Cluster" = "cluster",
+                "Treatment" = "treatment",
+                "Experiment" = "experiment",
+                "Orig.ident" = "orig.ident"
+              ),
+              selected = "gene",
+              inline = TRUE
+            ),
             actionButton("start", "Generate plots"),
             withSpinner(
             plotlyOutput("metaplot", height = "1000px",width = "1000px")
@@ -422,19 +436,27 @@ server <- function(input, output) {
       req(input$meta)
       req(input$cond)
       
-      expr_val <-  as.numeric(expr[input$meta, ])
-      # Celltype
-      cell <- meta$sctype_classification
-      # Table for plotting
       df <- data.frame(
         UMAP_1 = umap[, "harmonyumap_1"],
-        UMAP_2 = umap[, "harmonyumap_2"],
-        expr = expr_val
+        UMAP_2 = umap[, "harmonyumap_2"]
       )
       
-      df$orig.ident <- meta$orig.ident
-      df$experiment <- meta$experiment
+      df$expr <- as.numeric(expr[input$gene, ])
+      df$celltype <- meta$sctype_classification
+      df$cluster <- meta$seurat_clusters
       df$treatment <- meta$treatment
+      df$experiment <- meta$experiment
+      df$orig.ident <- meta$orig.ident
+      
+      colour_var <- switch(
+        input$colour_by,
+        "gene" = df$expr,
+        "celltype" = df$celltype,
+        "cluster" = df$cluster,
+        "treatment" = df$treatment,
+        "experiment" = df$experiment,
+        "orig.ident" = df$orig.ident
+      )
 # -------------------------------------------------------------------------------
       PlotsList <- list()
       Count <- 1
@@ -450,7 +472,7 @@ server <- function(input, output) {
             df_Filter,
             x = ~UMAP_1,
             y = ~UMAP_2,
-            color = ~expr,
+            color = colour_var,
             type = "scattergl",
             mode = "markers",
             marker = list(size = 3)
