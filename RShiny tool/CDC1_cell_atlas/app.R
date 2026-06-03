@@ -257,7 +257,7 @@ layout_columns(
               ),)
 
             ),
-            actionButton("start", "Generate plots")
+            actionButton("start", "Generate plots"),
             withSpinner(
             plotlyOutput("metaplot", height = "1000px",width = "1000px")
             )
@@ -411,7 +411,7 @@ server <- function(input, output) {
 
   ########## Cell Metadata Start button ############   
   PlotNameList <-eventReactive(input$start,{
-      list(input$cond)
+      input$cond
   })
   
 -------------------------------------------------------------------------
@@ -430,16 +430,20 @@ server <- function(input, output) {
         expr = expr_val
       )
       
-      df$Exp <- meta$experiment
-      df$WT <- meta$treatment
+      df$orig.ident <- meta$orig.ident
+      df$experiment <- meta$experiment
+      df$treatment <- meta$treatment
 -------------------------------------------------------------------------------
       PlotsList <- list()
       Count <- 1
       
       for (i in PlotNameList()){
-        word <- strsplit(i,":")[[2]]
-        column <- tolower(strsplit(i,":")[[1]])
-        df_Filter <- df[df$column == word,]
+        parts <- tolower(strsplit(i, ":")[[1]])
+        
+        column <- trimws(parts[1])
+        word <- trimws(parts[2])
+        
+        df_Filter <- df[df[[column]] == word,]
         p <-plot_ly(
             df_Filter,
             x = ~UMAP_1,
@@ -455,7 +459,8 @@ server <- function(input, output) {
       }
       
       
-      subplot(PlotsList, shareX = TRUE, shareY = TRUE)
+      subplot(PlotsList, shareX = TRUE, shareY = TRUE, nrows = 1)
+      
       # df_Filter_WT <- df[df$WT == "WT",]
       # p1 <-plot_ly(
       #   df_Filter_WT,
