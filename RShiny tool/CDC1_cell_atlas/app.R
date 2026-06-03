@@ -441,7 +441,7 @@ server <- function(input, output) {
         UMAP_2 = umap[, "harmonyumap_2"]
       )
       
-      df$expr <- as.numeric(expr[input$gene, ])
+      df$expr <- as.numeric(expr[input$meta, ])
       df$celltype <- meta$sctype_classification
       df$cluster <- meta$seurat_clusters
       df$treatment <- meta$treatment
@@ -472,7 +472,7 @@ server <- function(input, output) {
             df_Filter,
             x = ~UMAP_1,
             y = ~UMAP_2,
-            color = colour_var,
+            color = ~df_Filter[[colour_var]],
             type = "scattergl",
             mode = "markers",
             marker = list(size = 3)
