@@ -289,7 +289,7 @@ layout_columns(
             actionButton("start", "Generate plots"),
             
             withSpinner(
-            plotlyOutput("metaplot", height = "700px",width = "700px")
+            plotlyOutput("metaplot", height = "700px",width = "100%")
             )
             # 
             # tags$div(
@@ -501,52 +501,17 @@ server <- function(input, output) {
             mode = "markers",
             marker = list(size = 3)
           )
-        PlotsList[[Count]] <- div(class= "metaplots", p)
+        PlotsList[[Count]] <- p
         Count <- Count + 1
 
       }
       
-      
-      subplot(PlotsList, shareX = TRUE, shareY = TRUE, nrows = 1)
-      
-      # df_Filter_WT <- df[df$WT == "WT",]
-      # p1 <-plot_ly(
-      #   df_Filter_WT,
-      #   x = ~UMAP_1,
-      #   y = ~UMAP_2,
-      #   color = ~expr,
-      #   type = "scattergl",
-      #   mode = "markers",
-      #   marker = list(size = 3)
-      # )
-      # 
-      # df_Filter_Test <- df[df$WT == "Test",]
-      # p2 <- plot_ly(
-      #   df_Filter_Test,
-      #   x = ~UMAP_1,
-      #   y = ~UMAP_2,
-      #   color = ~expr,
-      #   type = "scattergl",
-      #   mode = "markers",
-      #   marker = list(size = 3)
-      # )
-      # 
-      # df_Filter_JVE <- df[df$Exp == "CITEseq_Toxo",]
-      # p3 <- plot_ly(
-      #   df_Filter_JVE,
-      #   x = ~UMAP_1,
-      #   y = ~UMAP_2,
-      #   color = ~expr,
-      #   type = "scattergl",
-      #   mode = "markers",
-      #   marker = list(size = 3)
-      # )
-      # subplot(
-      #   p1,
-      #   p2,
-      #   p3,
-      #   nrows = 1
-      # )
+      subplot(PlotsList,
+              shareX = TRUE,
+              shareY = TRUE,
+              nrows = ceiling(Count/5),
+              margin = 0.05
+        )
     })
   
   
