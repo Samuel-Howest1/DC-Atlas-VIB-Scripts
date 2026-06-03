@@ -414,12 +414,14 @@ server <- function(input, output) {
       input$cond
   })
   
--------------------------------------------------------------------------
+# -------------------------------------------------------------------------
  ########## Creating the Cell Metadata Dynamic plots ################
   output$metaplot <- renderPlotly({
       
       req(PlotNameList())
       req(input$meta)
+      req(input$cond)
+      
       expr_val <-  as.numeric(expr[input$meta, ])
       # Celltype
       cell <- meta$sctype_classification
@@ -433,14 +435,14 @@ server <- function(input, output) {
       df$orig.ident <- meta$orig.ident
       df$experiment <- meta$experiment
       df$treatment <- meta$treatment
--------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
       PlotsList <- list()
       Count <- 1
       
       for (i in PlotNameList()){
-        parts <- tolower(strsplit(i, ":")[[1]])
+        parts <- strsplit(i, ":")[[1]]
         
-        column <- trimws(parts[1])
+        column <- tolower(trimws(parts[1]))
         word <- trimws(parts[2])
         
         df_Filter <- df[df[[column]] == word,]
