@@ -457,6 +457,8 @@ server <- function(input, output) {
         "experiment" = df$experiment,
         "orig.ident" = df$orig.ident
       )
+      
+      df$groupby <- colour_var
 # -------------------------------------------------------------------------------
       PlotsList <- list()
       Count <- 1
@@ -472,7 +474,7 @@ server <- function(input, output) {
             df_Filter,
             x = ~UMAP_1,
             y = ~UMAP_2,
-            color = ~df_Filter[[colour_var]],
+            color = ~groupby,
             type = "scattergl",
             mode = "markers",
             marker = list(size = 3)
