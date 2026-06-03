@@ -289,7 +289,7 @@ layout_columns(
             actionButton("start", "Generate plots"),
             
             withSpinner(
-            plotlyOutput("metaplot", height = "700px",width = "100%")
+            plotlyOutput("metaplot", height = "700px",width = "1200px")
             )
             # 
             # tags$div(
@@ -483,6 +483,7 @@ server <- function(input, output) {
       df$groupby <- colour_var
 # -------------------------------------------------------------------------------
       PlotsList <- list()
+      Titles <-list()
       Count <- 1
       
       for (i in PlotNameList()){
@@ -502,18 +503,21 @@ server <- function(input, output) {
             marker = list(size = 3)
           )
         PlotsList[[Count]] <- p
+        Titles[[Count]] <- list(
+          text = word, showarrow = FALSE, 
+          xanchor = 'center', yanchor = 'top', font = list(size = 14)
+        )
         Count <- Count + 1
 
       }
       
-      subplot(PlotsList,
+      S <- subplot(PlotsList,
               shareX = TRUE,
               shareY = TRUE,
               nrows = ceiling(Count/5),
               margin = 0.05
-        )
+        ) |>layout(annotations= list(Titles))
     })
-  
   
 #################################################################################
 # ADD COUNT OF HOW MANY CELL PER GENE
