@@ -15,7 +15,7 @@ library(bslib)
 library(bootstrap)
 library(shinyWidgets)
 library(DT)
-
+library(shinycssloaders)
 ################### Loading Objects #######################################
 SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
@@ -25,7 +25,11 @@ Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################### Creating List of of selection for plots #########
 # genes <- rownames(SeuratObjT)
 genes <- c("Test","Ccr7","Cd81")
-condition <- unique(SeuratObjT@meta.data$orig.ident)
+condition <- c(
+  paste("Orig.ident:",unique(SeuratObjT@meta.data$orig.ident)),
+  paste("Treatment:",unique(SeuratObjT@meta.data$treatment)),
+  paste("Experiment:",unique(SeuratObjT@meta.data$experiment))
+               )
 metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
 ################################################################################
 ##################### Spliting up the data for improved speed #################
@@ -211,8 +215,9 @@ layout_columns(
   layout_columns(
           
         card(  
+          withSpinner(
           plotlyOutput("feature_plot", height = "700px",width = "700px")
-          ),
+          )),
         card(
             card_header("Violin Plot"),
             plotOutput("ViolinPlot", height = "700px"),
@@ -239,11 +244,24 @@ layout_columns(
               placeholder = 'Type a gene...',
               create = TRUE   # allows typing custom values
               )),
+            
+            selectizeInput(
+              inputId = "cond",
+              label = "Select or type a gene",
+              choices = condition,
+              selected = NULL,
+              multiple = TRUE,
+              options = list(
+                placeholder = 'Type a gene...',
+                create = TRUE,   # allows typing custom values
+                dropdownParent = "body"
+              ),)
 
             ),
             
+            withSpinner(
             plotlyOutput("metaplot", height = "1000px",width = "1000px")
-            
+            )
             # 
             # tags$div(
             #   plotOutput("Dimplot", height = "700px",width = "700px")
@@ -391,14 +409,25 @@ server <- function(input, output) {
   })
   
 #################################################################################
-    output$metaplot <- renderPlotly({
+
+  ########## Cell Metadata Start button ############   
+  PlotNameList <-eventReactive(input$start,{
+    Count <- 1
+    for (i in input$cond) {
+    word <- strsplit(i,":")[[1]]
+    
+    }
+  })
+  
+-------------------------------------------------------------------------
+ ########## Creating the Cell Metadata Dynamic plots ################
+  output$metaplot <- renderPlotly({
       
+      req(PlotNameList())
       req(input$meta)
-      
       expr_val <-  as.numeric(expr[input$meta, ])
       # Celltype
       cell <- meta$sctype_classification
-      
       # Table for plotting
       df <- data.frame(
         UMAP_1 = umap[, "harmonyumap_1"],
@@ -408,46 +437,62 @@ server <- function(input, output) {
       
       df$Exp <- meta$experiment
       df$WT <- meta$treatment
+      Count <- 1
       
+      for (i in PlotNameList){
+        df_Filter <- df[df == i,]
+        p <-plot_ly(
+            df_Filter,
+            x = ~UMAP_1,
+            y = ~UMAP_2,
+            color = ~expr,
+            type = "scattergl",
+            mode = "markers",
+            marker = list(size = 3)
+          )
+        PlotsList[[Count]] <- p
+        Count <- Count + 1
+
+      }
       
-      df_Filter_WT <- df[df$WT == "WT",]
-      p1 <-plot_ly(
-        df_Filter_WT,
-        x = ~UMAP_1,
-        y = ~UMAP_2,
-        color = ~expr,
-        type = "scattergl",
-        mode = "markers",
-        marker = list(size = 3)
-      )
-      
-      df_Filter_Test <- df[df$WT == "Test",]
-      p2 <- plot_ly(
-        df_Filter_Test,
-        x = ~UMAP_1,
-        y = ~UMAP_2,
-        color = ~expr,
-        type = "scattergl",
-        mode = "markers",
-        marker = list(size = 3)
-      )
-      
-      df_Filter_JVE <- df[df$Exp == "CITEseq_Toxo",]
-      p3 <- plot_ly(
-        df_Filter_JVE,
-        x = ~UMAP_1,
-        y = ~UMAP_2,
-        color = ~expr,
-        type = "scattergl",
-        mode = "markers",
-        marker = list(size = 3)
-      )
-      subplot(
-        p1,
-        p2,
-        p3,
-        nrows = 1
-      )
+      # df_Filter_WT <- df[df$WT == "WT",]
+      # p1 <-plot_ly(
+      #   df_Filter_WT,
+      #   x = ~UMAP_1,
+      #   y = ~UMAP_2,
+      #   color = ~expr,
+      #   type = "scattergl",
+      #   mode = "markers",
+      #   marker = list(size = 3)
+      # )
+      # 
+      # df_Filter_Test <- df[df$WT == "Test",]
+      # p2 <- plot_ly(
+      #   df_Filter_Test,
+      #   x = ~UMAP_1,
+      #   y = ~UMAP_2,
+      #   color = ~expr,
+      #   type = "scattergl",
+      #   mode = "markers",
+      #   marker = list(size = 3)
+      # )
+      # 
+      # df_Filter_JVE <- df[df$Exp == "CITEseq_Toxo",]
+      # p3 <- plot_ly(
+      #   df_Filter_JVE,
+      #   x = ~UMAP_1,
+      #   y = ~UMAP_2,
+      #   color = ~expr,
+      #   type = "scattergl",
+      #   mode = "markers",
+      #   marker = list(size = 3)
+      # )
+      # subplot(
+      #   p1,
+      #   p2,
+      #   p3,
+      #   nrows = 1
+      # )
     })
   
   
