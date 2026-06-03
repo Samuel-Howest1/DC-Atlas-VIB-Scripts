@@ -41,6 +41,17 @@ umap <- vis_data$umap
 meta <- vis_data$meta
 expr <- vis_data$expr
 
+########### Avg and Percentage expression of Genes for Dotplot later ##########
+# avg <- AverageExpression(SeuratObjT,group.by = "sctype_classification",features = genes,layer = "data")$RNA
+# 
+# pct_group <- meta$sctype_classification
+# pct_exp <- function(gene, expr, pct_group) {
+#   tapply(expr[gene, ] > 0, pct_group, mean) * 100
+#   }
+# pct_list <- lapply(genes, function(g) pct_exp(g, expr, group))
+# 
+# pct_mat <- do.call(cbind, pct_list)
+# colnames(pct_mat) <- genes
 ##############################################################################
 ########################### Info Table | Home Page ###########################
 # X-axis (columns)
@@ -272,8 +283,9 @@ layout_columns(
               inline = TRUE
             ),
             actionButton("start", "Generate plots"),
+            
             withSpinner(
-            plotlyOutput("metaplot", height = "1000px",width = "1000px")
+            plotlyOutput("metaplot", height = "100%",width = "100%")
             )
             # 
             # tags$div(
@@ -485,7 +497,7 @@ server <- function(input, output) {
             mode = "markers",
             marker = list(size = 3)
           )
-        PlotsList[[Count]] <- p
+        PlotsList[[Count]] <- div(class= "metaplots", p)
         Count <- Count + 1
 
       }
