@@ -364,9 +364,6 @@ server <- function(input, output) {
     
     req(input$gene)
     
-    # Cell coordinetes (already created)
-    # umap <- SeuratObjT@reductions$harmony_umap@cell.embeddings
-    
     # Gene 
     expr_val <-  as.numeric(expr[input$gene, ])
     # Celltype
@@ -405,11 +402,20 @@ server <- function(input, output) {
     
     req(input$gene)
     
-    VlnPlot(
-      SeuratObjT,
-      features = input$gene,
-      pt.size = 0
+    # VlnPlot(
+    #   SeuratObjT,
+    #   features = input$gene,
+    #   pt.size = 0
+    # )
+    
+    df_violin <- data.frame(
+      expr= as.numeric(expr[input$gene,]),
+      celltype = meta$sctype_classification
     )
+    
+    ggplot(df_violin, aes(x = celltype, y= expr)) +
+      geom_violin()+
+      theme_bw()
   })
   
   # Info verbeter zodat het duielijkt is 
