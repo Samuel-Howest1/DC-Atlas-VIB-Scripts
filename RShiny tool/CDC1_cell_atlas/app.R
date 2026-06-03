@@ -21,16 +21,6 @@ SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
 Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
-################### Creating List of of selection for plots #########
-# genes <- rownames(SeuratObjT)
-genes <- c("Test","Ccr7","Cd81")
-condition <- c(
-  paste("Orig.ident:",unique(SeuratObjT@meta.data$orig.ident)),
-  paste("Treatment:",unique(SeuratObjT@meta.data$treatment)),
-  paste("Experiment:",unique(SeuratObjT@meta.data$experiment))
-               )
-metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
-################################################################################
 ##################### Spliting up the data for improved speed #################
 vis_data <- list(
   umap = SeuratObjT@reductions$harmony_umap@cell.embeddings,
@@ -40,6 +30,23 @@ vis_data <- list(
 umap <- vis_data$umap
 meta <- vis_data$meta
 expr <- vis_data$expr
+
+### Removing Seuratobject
+rm(SeuratObjT)
+rm(vis_data)
+gc()
+################### Creating List of of selection for plots #########
+condition <- c(
+  paste("Orig.ident:",unique(meta$orig.ident)),
+  paste("Treatment:",unique(meta$treatment)),
+  paste("Experiment:",unique(meta$experiment))
+)
+metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
+################################################################################
+
+# List of Genes
+genes <- rownames(expr)
+#genes <- c("Test","Ccr7","Cd81")
 
 ########### Avg and Percentage expression of Genes for Dotplot later ##########
 # avg <- AverageExpression(SeuratObjT,group.by = "sctype_classification",features = genes,layer = "data")$RNA
@@ -185,11 +192,10 @@ tags$head(
 # ------------------ Selectors -----------------------------------
 card(
           max_height = "150px",
-            p("Select gene for feature plot."),
 layout_columns(              
             selectizeInput(
               inputId = "gene",
-              label = "Select or type a gene",
+              label = "Select gene for feature plot",
               choices = genes,
               selected = NULL,
               multiple = FALSE,
@@ -197,19 +203,7 @@ layout_columns(
                 placeholder = 'Type a gene...',
                 create = TRUE,   # allows typing custom values
                 dropdownParent = "body"
-              )),
-            selectizeInput(
-              inputId = "cond",
-              label = "Select or type a gene",
-              choices = condition,
-              selected = NULL,
-              multiple = TRUE,
-              options = list(
-                placeholder = 'Type a gene...',
-                create = TRUE,   # allows typing custom values
-                dropdownParent = "body"
-              ),)
-
+              ))
             # radioButtons(
             #   inputId = "cond",
             #   label = "Condition",
@@ -380,18 +374,17 @@ server <- function(input, output) {
     
     req(input$gene)
     
-    # Gene 
-    expr_val <-  as.numeric(expr[input$gene, ])
-    # Celltype
-    cell <- meta$sctype_classification
-    
-    # Table for plotting
+    # Umap 
     df <- data.frame(
       UMAP_1 = umap[, "harmonyumap_1"],
-      UMAP_2 = umap[, "harmonyumap_2"],
-      expr = expr_val
+      UMAP_2 = umap[, "harmonyumap_2"]
     )
+    
+    df$expr <- as.numeric(expr[input$meta, ])
+    
+    # Table for plotting
     df$Celltype <- meta$sctype_classification
+    
     # To male Hover Text of cells
     df$hover <- paste(
       rownames(df),
@@ -502,10 +495,11 @@ server <- function(input, output) {
             mode = "markers",
             marker = list(size = 3)
           )
-        ncol <- 5
+        ncol <- 4
 # ------ Calculating position of each SubTitle -----------
-        col <- ((Count - 1) %% ncol) + 1
-        row <- ((Count - 1) %/% ncol) + 1
+        tell <- Count
+        col <- ((tell - 1) %% ncol) + 1
+        row <- ((tell - 1) %/% ncol) + 1
         
         x <- (col - 0.5) / ncol
         y <- 1 - (row - 1) * 0.5 + 0.05
@@ -528,8 +522,10 @@ server <- function(input, output) {
       S <- subplot(PlotsList,
               shareX = TRUE,
               shareY = TRUE,
-              nrows = ceiling(Count/5),
-              margin = 0.05
+              nrows = ceiling(Count/4),
+              margin = 0.05,
+              titleX = TRUE,
+              titleY = TRUE
         ) |>layout(annotations= Titles)
     })
   
