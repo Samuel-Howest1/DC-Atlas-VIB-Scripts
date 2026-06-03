@@ -502,10 +502,24 @@ server <- function(input, output) {
             mode = "markers",
             marker = list(size = 3)
           )
+        ncol <- 5
+# ------ Calculating position of each SubTitle -----------
+        col <- ((Count - 1) %% ncol) + 1
+        row <- ((Count - 1) %/% ncol) + 1
+        
+        x <- (col - 0.5) / ncol
+        y <- 1 - (row - 1) * 0.5 + 0.05
+# -----------------------------------------------------        
         PlotsList[[Count]] <- p
         Titles[[Count]] <- list(
-          text = word, showarrow = FALSE, 
-          xanchor = 'center', yanchor = 'top', font = list(size = 14)
+          x = x,
+          y = y,
+          text = word,
+          showarrow = FALSE, 
+          xanchor = 'center',
+          yanchor = 'top',
+          font = list(size = 14)
+          
         )
         Count <- Count + 1
 
@@ -516,7 +530,7 @@ server <- function(input, output) {
               shareY = TRUE,
               nrows = ceiling(Count/5),
               margin = 0.05
-        ) |>layout(annotations= list(Titles))
+        ) |>layout(annotations= Titles)
     })
   
 #################################################################################
