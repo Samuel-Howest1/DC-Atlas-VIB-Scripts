@@ -43,11 +43,7 @@ condition <- c(
   paste("Treatment:",unique(meta$treatment)),
   paste("Experiment:",unique(meta$experiment))
 )
-metadata <- c("celltype" = "df$celltype",
-              "cluster" = "df$cluster",
-              "treatment" = "df$treatment",
-              "experiment" = "df$experiment",
-              "orig.ident" = "df$orig.ident")
+metadata <- c("celltype","cluster","treatment","experiment","orig.ident")
 
 genes <- rownames(expr)
 ########### Avg and Percentage expression of Genes for Dotplot later ##########
@@ -243,7 +239,7 @@ card( max_height = "150px",
             
             plotOutput("DimPlotMeta", height = "300")
             
-          ),col_widths = c(8, 4))
+          ),col_widths = 12)
         ),
   
 #############################################################################
@@ -472,7 +468,16 @@ server <- function(input, output,session) {
     df$experiment <- meta$experiment
     df$orig.ident <- meta$orig.ident
     
-  ggplot(df,aes(x = x, y = y, color= input$Dimplot))+
+    MetaDataColumn <- switch(
+      input$Dimplot,
+      "gene" = df$expr,
+      "celltype" = df$celltype,
+      "cluster" = df$cluster,
+      "treatment" = df$treatment,
+      "experiment" = df$experiment,
+      "orig.ident" = df$orig.ident
+    )
+  ggplot(df,aes(x = UMAP_1, y = UMAP_2, color=MetaDataColumn ))+
       geom_point(size= 0.5)+
       theme_classic()+
       labs(x= "UMAP_1", y= "UMAP_2")
