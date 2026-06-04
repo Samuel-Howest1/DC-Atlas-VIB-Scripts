@@ -197,7 +197,7 @@ layout_columns(
             selectizeInput(
               inputId = "gene",
               label = "Select gene for feature plot",
-              choices = genes,
+              choices = NULL,
               selected = NULL,
               multiple = FALSE,
               options = list(
@@ -259,7 +259,7 @@ layout_columns(
             selectizeInput(
               inputId = "meta",
               label = "Select Label for metadata",
-              choices = genes,
+              choices = NULL,
               selected = NULL,
               multiple = F,
               options = list(
@@ -316,7 +316,7 @@ nav_panel(title = "Gene Comparison",
                     selectizeInput(
                       inputId = "gene_1",
                       label = "Select Label for genes",
-                      choices = genes,
+                      choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
                       options = list(
@@ -327,7 +327,7 @@ nav_panel(title = "Gene Comparison",
                     selectizeInput(
                       inputId = "gene_2",
                       label = "Select Label for genes",
-                      choices = genes,
+                      choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
                       options = list(
@@ -367,8 +367,17 @@ nav_panel(title = "Contact",
 ############################      SERVER     ########################################
 #####################################################################################
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output,session) {
   
+  
+#################### LIST OF GENE ###################################################
+  updateSelectizeInput(session,"gene",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"meta",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"gene_1",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"gene_2",choices = genes,server = TRUE)
 
 ######################################################################################
   #Home Table
@@ -394,7 +403,7 @@ server <- function(input, output) {
       UMAP_2 = umap[, "harmonyumap_2"]
     )
     
-    df$expr <- as.numeric(expr[input$meta, ])
+    df$expr <- as.numeric(expr[input$gene, ])
     
     # Table for plotting
     df$Celltype <- meta$sctype_classification
