@@ -15,6 +15,7 @@ library(bslib)
 library(bootstrap)
 library(shinyWidgets)
 library(DT)
+library(ggplot2)
 library(shinycssloaders)
 ################### Loading Objects #######################################
 SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
@@ -216,6 +217,7 @@ layout_columns(
             #   inline = TRUE
             # )
           ,col_widths = c(6, 6))
+
 ),
 
 # ------------------------------------------------------------------
@@ -230,7 +232,19 @@ layout_columns(
             card_header("Violin Plot"),
             plotOutput("ViolinPlot", height = "700px"),
             
-            plotOutput("DotPlot", height = "700px")
+            selectizeInput(
+              inputId = "Dimplot",
+              choices = metadata,
+              label = "Select MetaData for Dimplot",
+              selected = NULL,
+              multiple = FALSE,
+              options = list(
+                placeholder = 'Type a gene...',
+                create = TRUE,   # allows typing custom values
+                dropdownParent = "body"
+              )),
+            
+            plotOutput("DimPlotMeta", height = "700px")
             
           )
           ),col_widths = c(8, 4)
@@ -428,12 +442,19 @@ server <- function(input, output) {
   })
   
   # Info verbeter zodat het duielijkt is 
-  output$DotPlot <- renderPlot({
-    DotPlot(
-      SeuratObjT,
-      features = genes,
-      group.by = "sctype_classification"
-    )
+  # output$DotPlot <- renderPlot({
+  #   DotPlot(
+  #     SeuratObjT,
+  #     features = genes,
+  #     group.by = "sctype_classification"
+  #   )
+  
+  output$DimplotMeta <- renderPlot({
+    
+  ggplot(df,aes(x = x, y = y, color= input$Dimplot))+
+      geom_point(size= 0.5)+
+      theme_classic()+
+      labs(x= "UMAP_1", y= "UMAP_2")
   })
   
 #################################################################################
