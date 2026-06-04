@@ -398,15 +398,9 @@ server <- function(input, output,session) {
       UMAP_1 = umap[, "harmonyumap_1"],
       UMAP_2 = umap[, "harmonyumap_2"]
     )
-    
     df$expr <- as.numeric(expr[input$gene, ])
-    df$expr <- as.numeric(expr[input$meta, ])
     df$celltype <- meta$sctype_classification
-    df$cluster <- meta$seurat_clusters
-    df$treatment <- meta$treatment
-    df$experiment <- meta$experiment
-    df$orig.ident <- meta$orig.ident
-    
+
     # To male Hover Text of cells
     df$hover <- paste(
       rownames(df),
@@ -465,6 +459,18 @@ server <- function(input, output,session) {
   #   )
   
   output$DimplotMeta <- renderPlot({
+    
+    df <- data.frame(
+      UMAP_1 = umap[, "harmonyumap_1"],
+      UMAP_2 = umap[, "harmonyumap_2"]
+    )
+    
+    df$expr <- as.numeric(expr[input$meta, ])
+    df$celltype <- meta$sctype_classification
+    df$cluster <- meta$seurat_clusters
+    df$treatment <- meta$treatment
+    df$experiment <- meta$experiment
+    df$orig.ident <- meta$orig.ident
     
   ggplot(df,aes(x = x, y = y, color= input$Dimplot))+
       geom_point(size= 0.5)+
