@@ -4,7 +4,6 @@
 library("renv")
 library("Seurat")
 library("patchwork")
-library("harmony")
 library("readxl")
 library("SeuratIntegrate")
 library("bench")
@@ -17,7 +16,7 @@ library("reticulate")
 ####################################################################
 # for script
 output <- "/srv/data/local/samuelg/Output/"
-seuratObjT <- readRDS("/srv/data/local/samuelg/Subset_Merged_seurat2000.rds")
+seuratObjT <- readRDS("/srv/data/local/samuelg/Test_SeuratObject_Examples/Subset_Merged_seurat2000.rds")
 ###################################################################
 # ####################################################################
 # folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
@@ -148,7 +147,7 @@ setwd(output)
 
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("./SCIV/Results/Graphs_Harmony_Integration", width = 10,height = 8)
+pdf("./SCIV/Results/Graphs_SCVI_Integration_test", width = 10,height = 8)
 for (i in Plotslist){
   
   AnnotTitle <- paste0("Plot ScVI integration: ",i)
@@ -240,7 +239,7 @@ writeData(wb, "ASW", ASWData)
 # Save Excel file
 saveWorkbook(
   wb,
-  file = "Integration_Scoring_Results.xlsx",
+  file = "Integration_Scoring_Results_test.xlsx",
   overwrite = TRUE
 )
 
