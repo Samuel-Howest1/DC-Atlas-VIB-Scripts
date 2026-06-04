@@ -128,7 +128,7 @@ seuratObjT <- RunHarmony(seuratObjT,
                          group.by.vars =c("treatment","experiment","orig.ident"), 
                          plot_convergence =TRUE, 
                          reduction.use ="RNA_pca_int", 
-                         theta=c(2,2),
+                         theta=c(2,2,2),
                          sigma=0.2,
                          lambda=1,
                          verbose=TRUE),memory = F
