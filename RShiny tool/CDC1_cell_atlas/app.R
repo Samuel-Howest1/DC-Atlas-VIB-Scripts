@@ -188,7 +188,8 @@ tags$head(
 ############## Feature Plot Page ################################
   nav_panel(title = "Gene plots",
 # ------------------ Selectors -----------------------------------
-card( max_height = "150px",
+card(   style = "margin-bottom: 5px;",
+        max_height = "150px",
             selectizeInput(
               inputId = "gene",
               label = "Select gene for feature plot",
@@ -457,6 +458,8 @@ server <- function(input, output,session) {
   output$DimplotMeta <- renderPlot({
     
     req(input$Dimplot)
+    
+    print(input$Dimplot)
     
     df <- data.frame(
       UMAP_1 = umap[, "harmonyumap_1"],
