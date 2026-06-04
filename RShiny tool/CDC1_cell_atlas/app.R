@@ -456,19 +456,20 @@ server <- function(input, output,session) {
   
   output$DimplotMeta <- renderPlot({
     
+    req(input$Dimplot)
+    
     df <- data.frame(
       UMAP_1 = umap[, "harmonyumap_1"],
       UMAP_2 = umap[, "harmonyumap_2"]
     )
     
-    df$expr <- as.numeric(expr[input$meta, ])
     df$celltype <- meta$sctype_classification
     df$cluster <- meta$seurat_clusters
     df$treatment <- meta$treatment
     df$experiment <- meta$experiment
     df$orig.ident <- meta$orig.ident
     
-    MetaDataColumn <- switch(
+    df$MetaDataColumn <- switch(
       input$Dimplot,
       "gene" = df$expr,
       "celltype" = df$celltype,
