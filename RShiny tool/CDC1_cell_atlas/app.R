@@ -244,7 +244,7 @@ layout_columns(
                 dropdownParent = "body"
               )),
             
-            plotOutput("DimPlotMeta", height = "700px")
+            plotOutput("DimPlotMeta", height = "300")
             
           )
           ),col_widths = c(8, 4)
@@ -445,9 +445,16 @@ server <- function(input, output,session) {
       celltype = meta$sctype_classification
     )
     
-    ggplot(df_violin, aes(x = celltype, y= expr)) +
+    ggplot(df_violin, aes(x = celltype, y= expr,fill = celltype)) +
       geom_violin()+
-      theme_bw()
+      scale_fill_brewer(palette = "Set3") +
+      theme_bw()+  
+      theme(
+        axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)
+      )
   })
   
   # Info verbeter zodat het duielijkt is 
