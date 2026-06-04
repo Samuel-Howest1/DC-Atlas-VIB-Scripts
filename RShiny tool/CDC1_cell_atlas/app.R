@@ -36,19 +36,20 @@ expr <- vis_data$expr
 rm(SeuratObjT)
 rm(vis_data)
 gc()
+
 ################### Creating List of of selection for plots #########
 condition <- c(
   paste("Orig.ident:",unique(meta$orig.ident)),
   paste("Treatment:",unique(meta$treatment)),
   paste("Experiment:",unique(meta$experiment))
 )
-metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
-################################################################################
+metadata <- c("celltype" = "df$celltype",
+              "cluster" = "df$cluster",
+              "treatment" = "df$treatment",
+              "experiment" = "df$experiment",
+              "orig.ident" = "df$orig.ident")
 
-# List of Genes
 genes <- rownames(expr)
-#genes <- c("Test","Ccr7","Cd81")
-
 ########### Avg and Percentage expression of Genes for Dotplot later ##########
 # avg <- AverageExpression(SeuratObjT,group.by = "sctype_classification",features = genes,layer = "data")$RNA
 # 
@@ -191,13 +192,11 @@ tags$head(
 ############## Feature Plot Page ################################
   nav_panel(title = "Gene plots",
 # ------------------ Selectors -----------------------------------
-card(
-          max_height = "150px",
-layout_columns(              
+card( max_height = "150px",
             selectizeInput(
               inputId = "gene",
               label = "Select gene for feature plot",
-              choices = genes,
+              choices = NULL,
               selected = NULL,
               multiple = FALSE,
               options = list(
@@ -216,8 +215,6 @@ layout_columns(
             #   selected = "orig",
             #   inline = TRUE
             # )
-          ,col_widths = c(6, 6))
-
 ),
 
 # ------------------------------------------------------------------
@@ -244,10 +241,9 @@ layout_columns(
                 dropdownParent = "body"
               )),
             
-            plotOutput("DimPlotMeta", height = "700px")
+            plotOutput("DimPlotMeta", height = "300")
             
-          )
-          ),col_widths = c(8, 4)
+          ),col_widths = c(8, 4))
         ),
   
 #############################################################################
@@ -259,7 +255,7 @@ layout_columns(
             selectizeInput(
               inputId = "meta",
               label = "Select Label for metadata",
-              choices = genes,
+              choices = NULL,
               selected = NULL,
               multiple = F,
               options = list(
@@ -316,7 +312,7 @@ nav_panel(title = "Gene Comparison",
                     selectizeInput(
                       inputId = "gene_1",
                       label = "Select Label for genes",
-                      choices = genes,
+                      choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
                       options = list(
@@ -327,7 +323,7 @@ nav_panel(title = "Gene Comparison",
                     selectizeInput(
                       inputId = "gene_2",
                       label = "Select Label for genes",
-                      choices = genes,
+                      choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
                       options = list(
@@ -367,8 +363,17 @@ nav_panel(title = "Contact",
 ############################      SERVER     ########################################
 #####################################################################################
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output,session) {
   
+  
+#################### LIST OF GENE ###################################################
+  updateSelectizeInput(session,"gene",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"meta",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"gene_1",choices = genes,server = TRUE)
+  
+  updateSelectizeInput(session,"gene_2",choices = genes,server = TRUE)
 
 ######################################################################################
   #Home Table
@@ -394,17 +399,20 @@ server <- function(input, output) {
       UMAP_2 = umap[, "harmonyumap_2"]
     )
     
+    df$expr <- as.numeric(expr[input$gene, ])
     df$expr <- as.numeric(expr[input$meta, ])
-    
-    # Table for plotting
-    df$Celltype <- meta$sctype_classification
+    df$celltype <- meta$sctype_classification
+    df$cluster <- meta$seurat_clusters
+    df$treatment <- meta$treatment
+    df$experiment <- meta$experiment
+    df$orig.ident <- meta$orig.ident
     
     # To male Hover Text of cells
     df$hover <- paste(
       rownames(df),
       "<br>Expression:",
       round(df$expr, 2),
-      "<br>Celltype:",df$Celltype
+      "<br>Celltype:",df$celltype
     )
     # Making a Plotly plot that resembles a featueplot
     plot_ly(
@@ -436,9 +444,16 @@ server <- function(input, output) {
       celltype = meta$sctype_classification
     )
     
-    ggplot(df_violin, aes(x = celltype, y= expr)) +
+    ggplot(df_violin, aes(x = celltype, y= expr,fill = celltype)) +
       geom_violin()+
-      theme_bw()
+      scale_fill_brewer(palette = "Set3") +
+      theme_bw()+  
+      theme(
+        axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)
+      )
   })
   
   # Info verbeter zodat het duielijkt is 
