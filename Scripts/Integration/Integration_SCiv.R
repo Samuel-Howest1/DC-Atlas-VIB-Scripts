@@ -1,14 +1,10 @@
 
 
-library(reticulate)
-use_condaenv("Integration", required = TRUE)
-py_config()
+
 library("renv")
 library("Seurat")
 library("patchwork")
-library("harmony")
 library("readxl")
-library("presto")
 library("SeuratIntegrate")
 library("bench")
 library("kBET")
@@ -18,37 +14,42 @@ library("reticulate")
 #BiocManager::install("anndataR")
 #library("anndataR")
 ####################################################################
-folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
-DataList <- list.files(folder)
-# Removing VBO_merge out of DataList/ comment out if not neede
-DataList <- DataList[-8]
-
-#Test Only JVE
-DataList <- DataList[c(1:2,10:11)]
-start <- 1
-#Only CDC1
-for (i in DataList){
-  print(i)
-  #Starting seuratobject
-  if (start == 1){
-    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #    seuratObjT <- seuratObjT
-    start <- start + 1
-    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
-    seuratObjT$orig.ident <- i
-  }
-  
-  else{
-    tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-    #  tmp <- tmp[,1:500] 
-    tmp$orig.ident <- i
-    colnames(tmp)<- paste0(colnames(tmp),"_",i)
-    seuratObjT <- merge(seuratObjT,tmp)
-  }
-}
-
-rm(tmp)
-gc()
+# for script
+output <- "/srv/data/local/samuelg/Output/"
+seuratObjT <- readRDS("/srv/data/local/samuelg/Test_SeuratObject_Examples/Subset_Merged_seurat2000.rds")
+###################################################################
+# ####################################################################
+# folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
+# DataList <- list.files(folder)
+# # Removing VBO_merge out of DataList/ comment out if not neede
+# DataList <- DataList[-8]
+# 
+# #Test Only JVE
+# DataList <- DataList[c(1:2,10:11)]
+# start <- 1
+# #Only CDC1
+# for (i in DataList){
+#   print(i)
+#   #Starting seuratobject
+#   if (start == 1){
+#     seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#     #    seuratObjT <- seuratObjT
+#     start <- start + 1
+#     colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
+#     seuratObjT$orig.ident <- i
+#   }
+#   
+#   else{
+#     tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
+#     #  tmp <- tmp[,1:500] 
+#     tmp$orig.ident <- i
+#     colnames(tmp)<- paste0(colnames(tmp),"_",i)
+#     seuratObjT <- merge(seuratObjT,tmp)
+#   }
+# }
+# 
+# rm(tmp)
+# gc()
 ###################################33
 # fix error
 # The annontation of the given Object VBO_merge was kept in Annotation_VBO, thus we can easily fix this
@@ -130,7 +131,7 @@ seuratObjT <- IntegrateLayers(object = seuratObjT,
                               ndims.out= 40,
                               orig.reduction = "RNA_pca_int",
                               new.reduction = "scvi",
-                              conda_env = "/Users/irc/AppData/Local/r-miniconda/envs/Integration/",
+                              conda_env = "/srv/data/local/samuelg/miniconda3/envs/Integration",
                               batch_key = "orig.ident",
                               verbose=TRUE
                               )
@@ -139,8 +140,29 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "scvi",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "scvi",dims = 1:40,reduction.name = "scvi_umap")
 
-DimPlot(seuratObjT,label = T,group.by = "orig.ident",reduction = "scvi_umap")
+###################################
+# Set output
+setwd(output)
+###################################
 
+# Plots pdf
+Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
+pdf("./SCIV/Results/Graphs_SCVI_Integration_test", width = 10,height = 8)
+for (i in Plotslist){
+  
+  AnnotTitle <- paste0("Plot ScVI integration: ",i)
+  print(AnnotTitle)
+  
+  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "scvi_umap")
+  p_combined <- p + plot_annotation(title = AnnotTitle)
+  
+  print(p_combined)
+  
+}
+dev.off()
+
+saveRDS(seuratObjT,"./SCIV/Objects/SeurqtObjT_SCVI_Subset.rds")
+#######################################################################""
 ######################################################################################
 #SCORING
 
@@ -217,31 +239,11 @@ writeData(wb, "ASW", ASWData)
 # Save Excel file
 saveWorkbook(
   wb,
-  file = "Integration_Scoring_Results.xlsx",
+  file = "Integration_Scoring_Results_test.xlsx",
   overwrite = TRUE
 )
 
-##############################"
-# Plots pdf
-Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration", width = 10,height = 8)
-for (i in Plotslist){
-  
-  AnnotTitle <- paste0("Plot Harmony integration: ",i)
-  print(AnnotTitle)
-  
-  p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
-  p_combined <- p + plot_annotation(title = AnnotTitle)
-  
-  print(p_combined)
-  
-}
-dev.off()
-
-
-
-
-#####################################################3
+#################################################################################
 # Other way with SeuratIntegrate package ---> get batch error
 #seuratObjT<- scVIIntegration(
 #  object = seuratObjT,

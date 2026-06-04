@@ -13,35 +13,14 @@ library("openxlsx")
 ####################################################################
 # for script
 
-<<<<<<< HEAD
-# output <- "/srv/data/local/samuelg/Output"
-seuratObjT <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Before_Integration_V2")
-=======
-output <- "/mnt/temp/srv/data/local/samuelg/Output/"
-seuratObjT <- readRDS("/mnt/temp/srv/data/local/samuelg/SeuratObjT_Before_Integration_V2")
->>>>>>> e4fa49283f4c06599ed142f8db9c847012c4d6a3
+output <- "/srv/data/local/samuelg/Output/"
+seuratObjT <- readRDS("/srv/data/local/samuelg/SeuratObjT_Before_Integration_V2")
 ###################################################################
 #folder <- "C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Pre and Post processing Results/"
 #DataList <- list.files(folder)
 # Removing VBO_merge out of DataList/ comment out if not neede
 #DataList <- DataList[-8]
 
-<<<<<<< HEAD
-# #Test Only JVE
-# #DataList <- DataList[c(1:2,10:11)]
-# #start <- 1
-# #Only CDC1
-# #for (i in DataList){
-# #  print(i)
-# #  #Starting seuratobject
-# #  if (start == 1){
-# #    seuratObjT <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
-# #    #    seuratObjT <- seuratObjT
-# #    start <- start + 1
-# #    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
-# #    seuratObjT$orig.ident <- i
-# #  }
-=======
 #Test Only JVE
 #DataList <- DataList[c(1:2,10:11)]
 #start <- 1
@@ -56,7 +35,6 @@ seuratObjT <- readRDS("/mnt/temp/srv/data/local/samuelg/SeuratObjT_Before_Integr
 #    colnames(seuratObjT)<- paste0(colnames(seuratObjT),"_",i)
 #    seuratObjT$orig.ident <- i
 #  }
->>>>>>> e4fa49283f4c06599ed142f8db9c847012c4d6a3
 # #  
 # #  else{
 #     tmp <- readRDS(paste0(folder,i,"/Post-process/SeuratObj_Post-Process_CDC1_",i,".rds"))
@@ -145,24 +123,15 @@ seuratObjT <- RunPCA(seuratObjT,
                      reduction.key = "rnaPC_int_")
 
 ###############################################################################################
-pca_embed <- Embeddings(seuratObjT,"RNA_pca_int")
-meta_data <- seuratObjT@meta.data
-
 BenchResult <- bench::mark(
-Harm_int <- RunHarmony(data_mat = pca_embed,
-                         meta_data = meta_data,
-                         vars_use = "treatment",
-                         theta = 2,
-                         sigma = 0.2,
-                         lambda = 1,
-                         plot_convergence = TRUE,
-                         verbose = TRUE),memory = F
-)
-
-seuratObjT[["harmony"]] <- CreateDimReducObject(
-  embeddings = Harm_int,
-  key = "harmony_",
-  assay = DefaultAssay(seuratObjT)
+seuratObjT <- RunHarmony(seuratObjT, 
+                         group.by.vars =c("treatment","experiment","orig.ident"), 
+                         plot_convergence =TRUE, 
+                         reduction.use ="RNA_pca_int", 
+                         theta=c(2,2),
+                         sigma=0.2,
+                         lambda=1,
+                         verbose=TRUE),memory = F
 )
 # Reduce max.itration?
 # Specific number of cluster?
@@ -172,8 +141,6 @@ seuratObjT <- FindNeighbors(seuratObjT,reduction = "harmony",dims = 1:40)
 seuratObjT <- FindClusters(seuratObjT, resolution = 1.2)
 seuratObjT <- RunUMAP(seuratObjT,reduction = "harmony",dims = 1:40,reduction.name = "harmony_umap")
 
-<<<<<<< HEAD
-=======
 
 ###################################
 # Set output
@@ -182,7 +149,7 @@ setwd(output)
 
 # Plots pdf
 Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("./Harmomy/Results/Graphs_Harmony_Integration", width = 10,height = 8)
+pdf("./Harmomy/Results/Graphs_Harmony_Integration_Treat_Exp_Org.pdf", width = 10,height = 8)
 for (i in Plotslist){
   
   AnnotTitle <- paste0("Plot Harmony integration: ",i)
@@ -196,8 +163,7 @@ for (i in Plotslist){
 }
 dev.off()
 
-saveRDS(seuratObjT,"./Harmomy/Object/SeurqtObjT_Harmomy_Subset.rds")
->>>>>>> e4fa49283f4c06599ed142f8db9c847012c4d6a3
+saveRDS(seuratObjT,"./Harmomy/Object/SeuratObjT_Harmony_Treat_Exp_Org.rds")
 
                            
 #######################################################################""
@@ -265,13 +231,6 @@ ASWScore  <- ScoreASW(seuratObjT,
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
 
-<<<<<<< HEAD
-###################################
-# Set output
-# setwd(output)
-###################################
-=======
->>>>>>> e4fa49283f4c06599ed142f8db9c847012c4d6a3
 
 wb <- createWorkbook()
 
@@ -293,29 +252,9 @@ writeData(wb, "ASW", ASWData)
 # Save Excel file
 saveWorkbook(
   wb,
-  file = "./Harmomy/Results/Integration_Scoring_Results.xlsx",
+  file = "./Harmomy/Results/Integration_Scoring_Harmony_Treat_Exp_Org.xlsx",
   overwrite = TRUE
 )
 
 ##############################"
-<<<<<<< HEAD
-# Plots pdf
-Plotslist <-c("orig.ident","experiment","treatment","sctype_classification","seurat_clusters","scDblFinder_class")
-pdf("Graphs_Harmony_Integration_VIB_Lap", width = 10,height = 8)
-for (i in Plotslist){
 
-    AnnotTitle <- paste0("Plot Harmony integration: ",i)
-    print(AnnotTitle)
-    
-    p <- DimPlot(seuratObjT,label = T,group.by = i,reduction = "harmony_umap")
-    p_combined <- p + plot_annotation(title = AnnotTitle)
-    
-    print(p_combined)
-  
-}
-dev.off()
-
-saveRDS(seuratObjT,"SeurqtObjT_Harmomy_only.rds")
-=======
-
->>>>>>> e4fa49283f4c06599ed142f8db9c847012c4d6a3
