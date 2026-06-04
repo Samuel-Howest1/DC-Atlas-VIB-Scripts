@@ -36,19 +36,20 @@ expr <- vis_data$expr
 rm(SeuratObjT)
 rm(vis_data)
 gc()
+
 ################### Creating List of of selection for plots #########
 condition <- c(
   paste("Orig.ident:",unique(meta$orig.ident)),
   paste("Treatment:",unique(meta$treatment)),
   paste("Experiment:",unique(meta$experiment))
 )
-metadata <- c("orig.ident","seurat_clusters","sctype_classification", "scDblFinder_class")
-################################################################################
+metadata <- c("celltype" = "df$celltype",
+              "cluster" = "df$cluster",
+              "treatment" = "df$treatment",
+              "experiment" = "df$experiment",
+              "orig.ident" = "df$orig.ident")
 
-# List of Genes
 genes <- rownames(expr)
-#genes <- c("Test","Ccr7","Cd81")
-
 ########### Avg and Percentage expression of Genes for Dotplot later ##########
 # avg <- AverageExpression(SeuratObjT,group.by = "sctype_classification",features = genes,layer = "data")$RNA
 # 
@@ -191,9 +192,7 @@ tags$head(
 ############## Feature Plot Page ################################
   nav_panel(title = "Gene plots",
 # ------------------ Selectors -----------------------------------
-card(
-          max_height = "150px",
-layout_columns(              
+card( max_height = "150px",
             selectizeInput(
               inputId = "gene",
               label = "Select gene for feature plot",
@@ -216,8 +215,6 @@ layout_columns(
             #   selected = "orig",
             #   inline = TRUE
             # )
-          ,col_widths = c(6, 6))
-
 ),
 
 # ------------------------------------------------------------------
@@ -246,8 +243,7 @@ layout_columns(
             
             plotOutput("DimPlotMeta", height = "300")
             
-          )
-          ),col_widths = c(8, 4)
+          ),col_widths = c(8, 4))
         ),
   
 #############################################################################
@@ -404,16 +400,19 @@ server <- function(input, output,session) {
     )
     
     df$expr <- as.numeric(expr[input$gene, ])
-    
-    # Table for plotting
-    df$Celltype <- meta$sctype_classification
+    df$expr <- as.numeric(expr[input$meta, ])
+    df$celltype <- meta$sctype_classification
+    df$cluster <- meta$seurat_clusters
+    df$treatment <- meta$treatment
+    df$experiment <- meta$experiment
+    df$orig.ident <- meta$orig.ident
     
     # To male Hover Text of cells
     df$hover <- paste(
       rownames(df),
       "<br>Expression:",
       round(df$expr, 2),
-      "<br>Celltype:",df$Celltype
+      "<br>Celltype:",df$celltype
     )
     # Making a Plotly plot that resembles a featueplot
     plot_ly(
