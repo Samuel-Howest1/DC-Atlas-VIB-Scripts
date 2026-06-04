@@ -133,7 +133,7 @@ tags$head(
               height: 700px;
               margin: 2em auto;
               padding: 1em;
-              overflow: vissible;
+              overflow: visible;
               display: flex;
               flex-direction: column;
          }
@@ -238,7 +238,7 @@ card(   style = "margin-bottom: 5px;",
                 dropdownParent = "body"
               )),
             
-            plotOutput("DimPlotMeta", height = "300")
+            plotOutput("DimPlotMeta", height = "500")
             
           ),col_widths = 12)
         ),
@@ -246,8 +246,7 @@ card(   style = "margin-bottom: 5px;",
 #############################################################################
 ################# Cell Metdata ######################################################
   nav_panel(title = "Cell Metadata", 
-            p("Select gene for feature plot."),
-            tags$div( class = "input",
+            tags$div( class = "input",layout_columns(
                       
             selectizeInput(
               inputId = "meta",
@@ -286,7 +285,7 @@ card(   style = "margin-bottom: 5px;",
               ),
               selected = "gene",
               inline = TRUE
-            ),
+            ),col_widths= c(4,4,4)),
             actionButton("start", "Generate plots"),
             
             withSpinner(
@@ -302,13 +301,12 @@ card(   style = "margin-bottom: 5px;",
 ###############################################################################
 ############################ Gene Comparison #################################
 
-nav_panel(title = "Gene Comparison", 
-          p("Select gene for feature plot."),
+nav_panel(title = "Gene Comparison",
           tags$div( class = "input",
-                    
+            layout_columns(
                     selectizeInput(
                       inputId = "gene_1",
-                      label = "Select Label for genes",
+                      label = "Select Gene 1 (X-axis):",
                       choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
@@ -319,7 +317,7 @@ nav_panel(title = "Gene Comparison",
                     
                     selectizeInput(
                       inputId = "gene_2",
-                      label = "Select Label for genes",
+                      label = "Select Gene 2 (Y-axis):",
                       choices = NULL,
                       selected = NULL,
                       multiple = FALSE,
@@ -327,9 +325,11 @@ nav_panel(title = "Gene Comparison",
                         placeholder = 'Type a gene...',
                         create = TRUE   # allows typing custom values
                       )),
-          ),
+          ),col_widths= c(4,4)),
            
           tags$div(
+            actionButton("start_comp", "Generate Comparison"),
+            
             plotOutput("Comparison", height = "700px",width = "700px")
           )
 ),
@@ -455,26 +455,23 @@ server <- function(input, output,session) {
   #     group.by = "sctype_classification"
   #   )
   
-  output$DimplotMeta <- renderPlot({
+  output$DimPlotMeta <- renderPlot({
     
     req(input$Dimplot)
-    
-    print(input$Dimplot)
-    
+
     df <- data.frame(
       UMAP_1 = umap[, "harmonyumap_1"],
       UMAP_2 = umap[, "harmonyumap_2"]
     )
-    
+
     df$celltype <- meta$sctype_classification
     df$cluster <- meta$seurat_clusters
     df$treatment <- meta$treatment
     df$experiment <- meta$experiment
     df$orig.ident <- meta$orig.ident
-    
+
     df$MetaDataColumn <- switch(
       input$Dimplot,
-      "gene" = df$expr,
       "celltype" = df$celltype,
       "cluster" = df$cluster,
       "treatment" = df$treatment,
@@ -486,7 +483,7 @@ server <- function(input, output,session) {
       theme_classic()+
       labs(x= "UMAP_1", y= "UMAP_2")
   })
-  
+
 #################################################################################
 
   ########## Cell Metadata Start button ############   
@@ -581,15 +578,29 @@ server <- function(input, output,session) {
     })
   
 #################################################################################
+PlotNameList <-eventReactive(input$start_comp,{
+  input$gene_1
+  input$gene_2
+})
 # ADD COUNT OF HOW MANY CELL PER GENE
   output$Comparison <- renderPlot({
-    FeatureScatter(
-      SeuratObjT,
-      feature1 = input$gene_1,
-      feature2 = input$gene_2
-    )
+    # FeatureScatter(
+    #   SeuratObjT,
+    #   feature1 = input$gene_1,
+    #   feature2 = input$gene_2
+    # )
+
+      df <- data.frame(
+        gene1 = as.numeric(expr[input$gene_1,]),
+        gene2 = as.numeric(expr[input$gene_2,]),
+        color = meta$sctype_classification
+      )
+      
+      ggplot(df, aes(x = gene1, y= gene2, color=color))+
+        geom_point(size = 0.2)+
+        labs(x=input$gene_1, y=input$gene_2 )
+      
   })
-  
 }
 # Run the application 
 shinyApp(ui = ui, server = server)
