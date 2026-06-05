@@ -59,6 +59,7 @@ genes <- rownames(expr)
 ##############################################################################
 ########################### Info Table | Home Page ###########################
 # X-axis (columns)
+table_length <- c(seq(1,16))
 report_cols <-c(
     "JVE008", "JVE010", "SAM016",
     "SAM05", "SAM06", "SAM2",
@@ -85,6 +86,25 @@ experiment_map <- c(
   "CITEseq_Toxo",
   "CITEseq_Toxo"
 )
+WT_map <- c(
+  "SAM2"   = "WT",
+  "SAM3"   = "WT",
+  "SAM05"  = "WT",
+  "SAM06"  = "WT",
+  "SAM016" = "WT",
+  "VBO004" = "WT",
+  "VBO005" = "Test",
+  "VBO006" = "Test",
+  "VBO007" = "Test",
+  "VBO008" = "Test",
+  "VBO009" = "Test",
+  "VBO010" = "Test",
+  "VBO011" = "Test",
+  "VBO012" = "Test",
+  "JVE008" = "WT",
+  "JVE010" = "Test"
+)
+
 # Y-axis (rows)
 conditions <- c(as.character(
   tags$div(
@@ -102,11 +122,15 @@ tbl <- data.frame(
   Condition = conditions,
   matrix(
     "",
-    nrow = length(conditions),
+    nrow = length(table_length),
     ncol = length(report_cols),
     dimnames = list(NULL, report_cols)
   ),
   check.names = FALSE)
+# Fill rows
+tbl[1, report_cols] <- report_cols                      # Orig.idents
+tbl[2, report_cols] <- WT_map[report_cols]             # Treatment
+tbl[3, report_cols] <- experiment_map[report_cols]     # Experiment
 ##############################################################################
 ############## Base of UI ###################################################
 ui <-  page_navbar(theme = shinytheme("united"),
