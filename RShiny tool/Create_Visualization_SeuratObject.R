@@ -27,6 +27,8 @@ sapply(
 
 for (layer in scale_layers) {LayerData(SeuratObjVis[["RNA"]], layer) <- NULL}
 
+SeuratObjT$MULTI_ID_merge <- paste0(sub("GSM_2677817_","",SeuratObjT$HTO_GUESS),"_",SeuratObjT$orig.ident)
+
 
 saveRDS(SeuratObjVis,"/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
 

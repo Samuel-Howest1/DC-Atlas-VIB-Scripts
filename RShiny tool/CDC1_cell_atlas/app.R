@@ -69,22 +69,22 @@ report_cols <-c(
     "VBO012"
   )
 experiment_map <- c(
-  "CITEseq_Test",
-  "CITEseq_Test",
-  "CITEseq_Final",
-  "CITEseq_Final",
-  "CITEseq_Notch",
-  "CITEseq_LNP_WT",
-  "CITEseq_LNP_eLNPs",
-  "CITEseq_LNP_pIC_LNPs",
-  "CITEseq_LNP_CpG",
-  "CITEseq_LNP_pIC",
-  "CITEseq_LNP_eLNPs",
-  "CITEseq_LNP_pIC_LNPs",
-  "CITEseq_LNP_CpG",
-  "CITEseq_LNP_pIC",
-  "CITEseq_Toxo",
-  "CITEseq_Toxo"
+  "Test",
+  "Test",
+  "Final",
+  "Final",
+  "Notch",
+  "LNP_WT",
+  "LNP_eLNPs",
+  "LNP_pIC_LNPs",
+  "LNP_CpG",
+  "LNP_pIC",
+  "LNP_eLNPs",
+  "LNP_pIC_LNPs",
+  "LNP_CpG",
+  "LNP_pIC",
+  "Toxo",
+  "Toxo"
 )
 WT_map <- c(
   "SAM2"   = "WT",
@@ -115,15 +115,15 @@ conditions <- c(as.character(
       " Treatment")),
   as.character(
     tags$div(
-      tags$img(src = "lab.png", height = "30px")," Experiment"
+      tags$img(src = "lab.png", height = "30px")," Experiment CITEseq:"
     ))
 )
 tbl <- data.frame(
   Condition = conditions,
   matrix(
     "",
-    nrow = length(table_length),
-    ncol = length(report_cols),
+    nrow = length(conditions),
+    ncol = length(table_length),
     dimnames = list(NULL, report_cols)
   ),
   check.names = FALSE)
