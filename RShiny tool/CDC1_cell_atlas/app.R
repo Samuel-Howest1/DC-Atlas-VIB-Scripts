@@ -15,7 +15,6 @@ library(bslib)
 library(bootstrap)
 library(shinyWidgets)
 library(DT)
-library(ggplot2)
 library(shinycssloaders)
 ################### Loading Objects #######################################
 SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
@@ -246,7 +245,8 @@ card(   style = "margin-bottom: 5px;",
 #############################################################################
 ################# Cell Metdata ######################################################
   nav_panel(title = "Cell Metadata", 
-            tags$div( class = "input",layout_columns(
+            tags$div( class = "input",
+  layout_columns(
                       
             selectizeInput(
               inputId = "meta",
@@ -286,6 +286,7 @@ card(   style = "margin-bottom: 5px;",
               selected = "gene",
               inline = TRUE
             ),col_widths= c(4,4,4)),
+  
             actionButton("start", "Generate plots"),
             
             withSpinner(
@@ -362,6 +363,8 @@ nav_panel(title = "Contact",
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
   
+  observe({cat("Current tqb is loqdaed")})
+  observe({print(input$start)})
   
 #################### LIST OF GENE ###################################################
   updateSelectizeInput(session,"gene",choices = genes,server = TRUE)
@@ -495,19 +498,11 @@ server <- function(input, output,session) {
  ########## Creating the Cell Metadata Dynamic plots ################
   output$metaplot <- renderPlotly({
       
+    
       req(PlotNameList())
       req(input$meta)
       req(input$cond)
-      
-      print(input$meta)
-      print(input$cond)
-      print(input$colour_by)
-      
-      cat("df rows:", nrow(df), "\n")
-      cat("df cols:", ncol(df), "\n")
-      
-      str(df)
-      
+
       df <- data.frame(
         UMAP_1 = umap[, "harmonyumap_1"],
         UMAP_2 = umap[, "harmonyumap_2"]
@@ -519,7 +514,7 @@ server <- function(input, output,session) {
       df$treatment <- meta$treatment
       df$experiment <- meta$experiment
       df$orig.ident <- meta$orig.ident
-      
+
       colour_var <- switch(
         input$colour_by,
         "gene" = df$expr,
@@ -529,19 +524,18 @@ server <- function(input, output,session) {
         "experiment" = df$experiment,
         "orig.ident" = df$orig.ident
       )
-      
+
       df$groupby <- colour_var
 # -------------------------------------------------------------------------------
       PlotsList <- list()
-      Titles <-list()
       Count <- 1
       
       for (i in PlotNameList()){
         parts <- strsplit(i, ":")[[1]]
-        
+
         column <- tolower(trimws(parts[1]))
         word <- trimws(parts[2])
-        
+
         df_Filter <- df[df[[column]] == word,]
         p <-plot_ly(
             df_Filter,
@@ -553,23 +547,30 @@ server <- function(input, output,session) {
             marker = list(size = 3)
           )
         
+        print(class(p))
+
         PlotsList[[Count]] <- p
+
         Count <- Count + 1
 
       }
       
+
       subplot(PlotsList,
               shareX = TRUE,
               shareY = TRUE,
               nrows = ceiling(Count/4),
-              margin = 0.05,
-              titleX = TRUE,
-              titleY = TRUE
+              margin = 0.05
         )
+      
+
     })
   
+  
+  
+  
 #################################################################################
-PlotNameList <-eventReactive(input$start_comp,{
+Complot <-eventReactive(input$start_comp,{
   input$gene_1
   input$gene_2
 })
