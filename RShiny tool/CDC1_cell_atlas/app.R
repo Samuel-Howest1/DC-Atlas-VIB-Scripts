@@ -543,38 +543,20 @@ server <- function(input, output,session) {
             mode = "markers",
             marker = list(size = 3)
           )
-        ncol <- 4
-# ------ Calculating position of each SubTitle -----------
-        tell <- Count
-        col <- ((tell - 1) %% ncol) + 1
-        row <- ((tell - 1) %/% ncol) + 1
         
-        x <- (col - 0.5) / ncol
-        y <- 1 - (row - 1) * 0.5 + 0.05
-# -----------------------------------------------------        
         PlotsList[[Count]] <- p
-        Titles[[Count]] <- list(
-          x = x,
-          y = y,
-          text = word,
-          showarrow = FALSE, 
-          xanchor = 'center',
-          yanchor = 'top',
-          font = list(size = 14)
-          
-        )
         Count <- Count + 1
 
       }
       
-      S <- subplot(PlotsList,
+      subplot(PlotsList,
               shareX = TRUE,
               shareY = TRUE,
               nrows = ceiling(Count/4),
               margin = 0.05,
               titleX = TRUE,
               titleY = TRUE
-        ) |>layout(annotations= Titles)
+        )
     })
   
 #################################################################################
