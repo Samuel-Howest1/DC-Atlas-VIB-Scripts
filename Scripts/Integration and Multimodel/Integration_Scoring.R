@@ -8,7 +8,7 @@ filename <- "./Harmomy/Results/Integration_Scoring_Harmony_Treat_Exp_Org.xlsx"
 SeuratObjScore <- readRDS("")
 
 # Subsetting the data
-
+prop.table(table(seurat_obj$orig.ident)) * 100
 
 #######################################################################""
 #SCORING
