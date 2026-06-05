@@ -22,6 +22,15 @@ for (i in Percentage){
   (i/100)*500
 }
 
+
+library("Seurat")
+
+seuratObjT <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Before_Integration_V2")
+
+cellsample <- sample(Cells(seuratObjT), size = 2000,replace = F)
+
+subSeurat <- subset(seuratObjT, cells = cellsample)
+
 #######################################################################""
 #SCORING
 
