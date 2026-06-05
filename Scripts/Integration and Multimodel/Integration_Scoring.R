@@ -5,10 +5,22 @@
 Output <- ""
 filename <- "./Harmomy/Results/Integration_Scoring_Harmony_Treat_Exp_Org.xlsx"
 
-SeuratObjScore <- readRDS("")
+SeuratObjScore <- readRDS("/Users/samue/Desktop/Stage VIB/Subset_Merged_seurat2000.rds")
 
 # Subsetting the data
-prop.table(table(seurat_obj$orig.ident)) * 100
+
+get_origident_percent <- function(obj) {
+  prop.table(table(obj$orig.ident)) * 100
+}
+
+Percentage <- get_origident_percent(SeuratObjScore)
+
+Total_cell <- 500
+
+for (i in Percentage){
+  print(i)
+  (i/100)*500
+}
 
 #######################################################################""
 #SCORING
