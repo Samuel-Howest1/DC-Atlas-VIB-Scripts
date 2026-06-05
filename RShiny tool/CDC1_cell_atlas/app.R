@@ -499,6 +499,15 @@ server <- function(input, output,session) {
       req(input$meta)
       req(input$cond)
       
+      print(input$meta)
+      print(input$cond)
+      print(input$colour_by)
+      
+      cat("df rows:", nrow(df), "\n")
+      cat("df cols:", ncol(df), "\n")
+      
+      str(df)
+      
       df <- data.frame(
         UMAP_1 = umap[, "harmonyumap_1"],
         UMAP_2 = umap[, "harmonyumap_2"]
