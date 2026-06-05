@@ -1,10 +1,18 @@
 
+library("Seurat")
+library("SeuratIntegrate")
+library("openxlsx")
 
 # Sampleing based on orig.idents to aviod biased
 
-Output <- ""
-filename <- "./Harmomy/Results/Integration_Scoring_Harmony_Treat_Exp_Org.xlsx"
+Output <- getwd()
+filename <- ".TEST.xlsx"
 
+# Reduction name
+reduc <- ""
+
+# Batch variation of LISI score | What used for integration
+batchvar <- ""
 SeuratObjScore <- readRDS("/Users/samue/Desktop/Stage VIB/Subset_Merged_seurat2000.rds")
 
 # Subsetting the data
@@ -13,24 +21,33 @@ get_origident_percent <- function(obj) {
   prop.table(table(obj$orig.ident)) * 100
 }
 
+# Same order of Orig.idents
 Percentage <- get_origident_percent(SeuratObjScore)
+Percentage
+Orig_list <- unique(SeuratObjScore@meta.data$orig.ident)
+Orig_list
 
 Total_cell <- 500
-
+count <- 1
+Cell_sample <- c()
 for (i in Percentage){
-  print(i)
-  (i/100)*500
+  
+  Name <- Orig_list[count]
+  
+  ant <-  (i/100)*Total_cell
+  ant <- round(ant, digits = 0)
+  
+  iteration_cells <- Cells(SeuratObjScore)[SeuratObjScore@meta.data$orig.ident == Name]
+  
+  Cell_sample <-c(Cell_sample,sample(iteration_cells,size = ant,replace = F))
+  
+  count <- count + 1
+  
 }
 
-
-library("Seurat")
-
-seuratObjT <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Before_Integration_V2")
-
-cellsample <- sample(Cells(seuratObjT), size = 2000,replace = F)
-
-subSeurat <- subset(seuratObjT, cells = cellsample)
-
+subSeurat <- subset(SeuratObjScore, cells = Cell_sample)
+ResultPercentage <-  get_origident_percent(subSeurat)
+ResultPercentage
 #######################################################################""
 #SCORING
 
@@ -42,25 +59,25 @@ subSeurat <- subset(seuratObjT, cells = cellsample)
 #  Gebruik slurm Output
 # KBET Scoring Measuring that cell have a blanced mixed of Batches
 
-KbetScore <- ScoreKBET(seuratObjT,
+KbetScore <- ScoreKBET(subSeurat,
                        batch.var = "orig.ident",
                        cell.var = "sctype_classification",
-                       what = "harmony")
+                       what = reduc)
 
 KbetData <- as.data.frame(KbetScore)
 
 #LISI Scoring 
 ## LISIe Scoring cell Mixing
-LisiCelltype <- ScoreLISI(seuratObjT,
-                          integration = "harmony",
+LisiCelltype <- ScoreLISI(subSeurat,
+                          integration = reduc,
                           reduction = "RNA_pca_int",
                           cell.var = "sctype_classification")
 
 ## LISIi Batch mixing
-LisiBatch <- ScoreLISI(seuratObjT,
-                       integration = "harmony",
+LisiBatch <- ScoreLISI(subSeurat,
+                       integration = reduc,
                        reduction = "RNA_pca_int",
-                       batch.var = "treatment")
+                       batch.var = batchvar)
 
 
 LisiData <- as.data.frame(c(LisiCelltype,LisiBatch))
@@ -91,8 +108,8 @@ LisiResults<- data.frame(
 
 
 # AWS
-ASWScore  <- ScoreASW(seuratObjT,
-                      what = "harmony",
+ASWScore  <- ScoreASW(subSeurat,
+                      what = reduc,
                       cell.var = "sctype_classification",
                       verbose = TRUE,)
 ASWData <- as.data.frame(ASWScore)
