@@ -13,8 +13,6 @@ Late_Mature <- c("Cd63", "Fscn1", "Il4i1", "Socs2", "Ccr7")
 Seuratplot <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Harmony_Treat_Exp_Theta_ALL_3.rds")
 
 adt_features <- c(
-  "CD11b-mh",
-  "CD11c",
   "CD16-CD32",
   "CD16/32",
   "CD172a",
@@ -23,8 +21,6 @@ adt_features <- c(
   "CD192 (CCR2)",
   "CD207",
   "CD207-mh",
-  "CD21-CD35",
-  "CD210",
   "CD226",
   "CD226-0852",
   "CD44",
@@ -86,24 +82,6 @@ adt_features <- c(
   "Streptavidin-A0955"
 )
 
-
-CD16-CD32        ??? CD16/32
-CD172a           ??? CD172a (SIRPa)
-CD192            ??? CD192 (CCR2)
-CD207            ??? CD207-mh
-CD44             ??? CD44-mh
-CD45R-B220       ??? CD45R/B220
-CD62P            ??? CD62P (P-selectin)
-I-A/I-E          ??? IA-IE
-IL-33Ra          ??? IL33Ra
-KLRG1            ??? KLRG1-mh
-Ly6G-Ly6C        ??? Ly-6G/Ly-6C
-Ly-6A/E          ??? Ly6A-Ly6E
-MAdCAM-1         ??? MAdCAM1
-MERTK            ??? MERTK (Mer)
-NK-1.1           ??? NK1-1
-TER-119          ??? TER119
-Tim-4            ??? Tim4
 
 origlist <- unique(Seuratplot@meta.data$orig.ident)
 pdf("Harmony_CDC1_Markers_Theta_3_whole plot.pdf", width = 65,height = 10)
