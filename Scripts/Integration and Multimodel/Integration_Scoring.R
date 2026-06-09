@@ -5,15 +5,15 @@ library("openxlsx")
 
 # Sampleing based on orig.idents to aviod biased
 
-Output <- getwd()
-filename <- ".TEST.xlsx"
+Output <- "/srv/data/local/samuelg/Output/CCA/Results/"
+filename <- "CCA_treatment_Score.xlsx"
 
 # Reduction name
-reduc <- ""
+reduc <- "integrated.cca"
 
 # Batch variation of LISI score | What used for integration
-batchvar <- ""
-SeuratObjScore <- readRDS("/Users/samue/Desktop/Stage VIB/Subset_Merged_seurat2000.rds")
+batchvar <- "treatment"
+SeuratObjScore <- readRDS("/srv/data/local/samuelg/Output/CCA/Objects/SeurqtObjT_CCA_treatment.rds")
 
 # Subsetting the data
 
@@ -46,6 +46,8 @@ for (i in Percentage){
 }
 
 subSeurat <- subset(SeuratObjScore, cells = Cell_sample)
+rm(SeuratObjScore)
+gc()
 ResultPercentage <-  get_origident_percent(subSeurat)
 ResultPercentage
 #######################################################################""
