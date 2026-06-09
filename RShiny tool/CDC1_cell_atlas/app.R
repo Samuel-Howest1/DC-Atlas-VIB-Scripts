@@ -128,9 +128,9 @@ tbl <- data.frame(
   ),
   check.names = FALSE)
 # Fill rows
-tbl[1, report_cols] <- report_cols                      # Orig.idents
-tbl[2, report_cols] <- WT_map[report_cols]             # Treatment
-tbl[3, report_cols] <- experiment_map[report_cols]     # Experiment
+# tbl[1, report_cols] <- report_cols                      # Orig.idents
+# tbl[2, report_cols] <- WT_map[report_cols]             # Treatment
+# tbl[3, report_cols] <- experiment_map[report_cols]     # Experiment
 ##############################################################################
 ############## Base of UI ###################################################
 ui <-  page_navbar(theme = shinytheme("united"),
@@ -209,7 +209,7 @@ tags$head(
  
 ##################################################################
 ############## Feature Plot Page ################################
-  nav_panel(title = "Gene plots",
+  nav_panel(title = "Gene Plots",
 # ------------------ Selectors -----------------------------------
 card(   style = "margin-bottom: 5px;",
         max_height = "150px",
@@ -274,7 +274,7 @@ card(   style = "margin-bottom: 5px;",
                       
             selectizeInput(
               inputId = "meta",
-              label = "Select Label for metadata",
+              label = "Select Gene to analysis",
               choices = NULL,
               selected = NULL,
               multiple = F,
@@ -285,12 +285,12 @@ card(   style = "margin-bottom: 5px;",
             
             selectizeInput(
               inputId = "cond",
-              label = "Select or type a gene",
+              label = "Select or type the subset",
               choices = condition,
               selected = NULL,
               multiple = TRUE,
               options = list(
-                placeholder = 'Type a gene...',
+                placeholder = 'Type a subset...',
                 create = TRUE,   # allows typing custom values
                 dropdownParent = "body"
               ),)
@@ -613,7 +613,7 @@ Complot <-eventReactive(input$start_comp,{
       )
       
       ggplot(df, aes(x = gene1, y= gene2, color=color))+
-        geom_point(size = 0.2)+
+        geom_point(size = 0.5)+
         labs(x=input$gene_1, y=input$gene_2 )
       
   })
