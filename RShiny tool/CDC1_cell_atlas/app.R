@@ -19,8 +19,53 @@ library(shinycssloaders)
 ################### Loading Objects #######################################
 SeuratObjT <- readRDS("/Users/irc/Desktop/Harmony_Treat_Exp_ADT_Correct_Annot.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
-
 SeuratObjT$seurat_clusters <- seuratObj@active.ident
+
+
+# Define cluster -> cell type mapping
+celltype_map <- c(
+  "0" = "Late Mature",
+  "1" = "Late Immature",
+  "2" = "Early Mature",
+  "3" = "Late Mature",
+  "4" = "Late Mature",
+  "5" = "Late Immature",
+  "6" = "Early Mature",
+  "7" = "Late Mature",
+  "8" = "Early Immature",
+  "9" = "Proliferating cDC1s",
+  "10" = "Early Immature",
+  "11" = "Proliferating cDC1s",
+  "12" = "Early Immature",
+  "13" = "Proliferating cDC1s",
+  "14" = "Early Immature",
+  "15" = "Proliferating cDC1s",
+  "16" = "Late Immature",
+  "17" = "Late Immature",
+  "18" = "Late Mature",
+  "19" = "Late Mature",
+  "20" = "Early Mature",
+  "21" = "Late Immature",
+  "22" = "Proliferating cDC1s",
+  "23" = "Early Mature",
+  "24" = "Early Mature",
+  "25" = "cDC1s engulfing RBCs",
+  "26" = "Late Immature",
+  "27" = "Late Mature",
+  "28" = "Early Immature",
+  "29" = "Early Immature",
+  "30" = "Late Mature",
+  "31" = "Late Mature",
+  "32" = "Late Mature",
+  "33" = "Early Mature",
+  "34" = "Proliferating cDC1s",
+  "35" = "Late Mature"
+)
+
+# Add cell type annotation
+seurat_obj$sctype_classification <- celltype_map[as.character(seurat_obj$seurat_clusters)]
+
+
 Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
 ##################### Spliting up the data for improved speed #################

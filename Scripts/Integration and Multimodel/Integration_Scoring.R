@@ -46,6 +46,7 @@ for (i in Percentage){
 }
 
 subSeurat <- subset(SeuratObjScore, cells = Cell_sample)
+subSeurat <- subset(subSeurat, subSeurat$sctype_classification == " Dendritic cells 1"| seuratObjR$sctype_classification == "Migratory dendritic cells 1" | seuratObjR$sctype_classification == "Proliferating DCs")
 rm(SeuratObjScore)
 gc()
 ResultPercentage <-  get_origident_percent(subSeurat)
