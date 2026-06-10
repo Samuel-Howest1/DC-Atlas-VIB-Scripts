@@ -20,5 +20,6 @@ The "Integration and Multimodel" folder script to merge all resulting data of th
 
 The Reports folder contains all the reports for the processed datasets. This means only what was done to processes the data. The datasets and the biological result are not present. Additionally not all are published and are kept private by the VIB until the paper is complete.
 
-
 ## Rshiny tool
+
+The Rshiny tool contains 3 main pages used for analysis of the data. The first page is "Gene plots"

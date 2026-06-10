@@ -4,14 +4,19 @@
 # We will reduce it to only contain the data/graphs that are nessecarry for the Rshiny tool
 # Thus reducing its size and increasing loading speed for the Rshiny Tool
 
+library("Seurat")
 
-SeuratObjVis <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/SeuratObjT_Harmomy_Treat_Exp.rds")
+
+SeuratObjVis <- readRDS("/srv/data/local/samuelg/Output/Harmomy/Object/Harmony_Integration_T_E_ADTV2_Final.rds")
+
+SeuratObjVis$MULTI_ID_merge <- paste0(sub("GSM_2677817_","",SeuratObjVis$HTO_GUESS),"_",SeuratObjVis$orig.ident)
+
 
 SeuratObjVis <- DietSeurat(
   SeuratObjVis,
-  assays = c("RNA","HTO"),
+  assays = c("RNA","HTO","ADT"),
   scale.data = FALSE,
-  dimreducs = "harmony_umap",
+  dimreducs = "wnn.umap",
   graphs = NULL)
 
 Layers(SeuratObjVis[["RNA"]])
@@ -27,9 +32,8 @@ sapply(
 
 for (layer in scale_layers) {LayerData(SeuratObjVis[["RNA"]], layer) <- NULL}
 
-SeuratObjT$MULTI_ID_merge <- paste0(sub("GSM_2677817_","",SeuratObjT$HTO_GUESS),"_",SeuratObjT$orig.ident)
 
 
-saveRDS(SeuratObjVis,"/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
+saveRDS(SeuratObjVis,"/srv/data/local/samuelg/Output/Harmomy/Object/Harmony_Treat_Exp_ADT_VIS_Final.rds")
 
 
