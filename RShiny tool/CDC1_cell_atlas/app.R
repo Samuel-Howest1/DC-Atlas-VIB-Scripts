@@ -17,13 +17,14 @@ library(shinyWidgets)
 library(DT)
 library(shinycssloaders)
 ################### Loading Objects #######################################
-SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
+SeuratObjT <- readRDS("C:/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_ADT_VIS_Final.rds")
+DefaultAssay(SeuratObjT) <- "RNA"
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
 Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
 ##################### Spliting up the data for improved speed #################
 vis_data <- list(
-  umap = SeuratObjT@reductions$harmony_umap@cell.embeddings,
+  umap = SeuratObjT@reductions$wnn.umap@cell.embeddings,
   meta = SeuratObjT@meta.data,
   expr = GetAssayData(SeuratObjT,assay = "RNA",layer = "data"))
 
@@ -419,8 +420,8 @@ server <- function(input, output,session) {
     
     # Umap 
     df <- data.frame(
-      UMAP_1 = umap[, "harmonyumap_1"],
-      UMAP_2 = umap[, "harmonyumap_2"]
+      UMAP_1 = umap[, "wnn.umap_1"],
+      UMAP_2 = umap[, "wnn.umap_2"]
     )
     df$expr <- as.numeric(expr[input$gene, ])
     df$celltype <- meta$sctype_classification
@@ -487,8 +488,8 @@ server <- function(input, output,session) {
     req(input$Dimplot)
 
     df <- data.frame(
-      UMAP_1 = umap[, "harmonyumap_1"],
-      UMAP_2 = umap[, "harmonyumap_2"]
+      UMAP_1 = umap[, "wnn.umap_1"],
+      UMAP_2 = umap[, "wnn.umap_2"]
     )
 
     df$celltype <- meta$sctype_classification
@@ -528,8 +529,8 @@ server <- function(input, output,session) {
       req(input$cond)
 
       df <- data.frame(
-        UMAP_1 = umap[, "harmonyumap_1"],
-        UMAP_2 = umap[, "harmonyumap_2"]
+        UMAP_1 = umap[, "wnn.umap_1"],
+        UMAP_2 = umap[, "wnn.umap_2"]
       )
       
       df$expr <- as.numeric(expr[input$meta, ])
