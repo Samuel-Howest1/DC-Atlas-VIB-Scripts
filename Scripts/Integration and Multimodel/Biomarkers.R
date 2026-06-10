@@ -6,6 +6,7 @@ library("presto")
 library("openxlsx")
 library("readxl")
 library("dplyr")
+library("ggplot2")
 #################################
 # Functions
 colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
@@ -13,7 +14,7 @@ colorSomeCells<-function(clusterMatrix, coordsTable, cellsToColor){
   clusterMatrix[cellsToColor,which(colnames(clusterMatrix)=="toColor")]<-TRUE
   
   p1 <- ggplot()+
-    geom_point(aes_string(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
+    geom_point(aes(x=colnames(coordsTable)[1],y=colnames(coordsTable)[2], colour=clusterMatrix$toColor), data=coordsTable, size=1) +
     scale_color_manual(values=c('TRUE'="orangered",'FALSE'="lightgray")) +
     theme_classic() +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "right", legend.text=element_text(size=12))
@@ -55,30 +56,39 @@ names(markersList)<-paste0("cluster",0:totalNrClusters)
 
 write.xlsx(markersList,paste0("Harmony_Marker_RNA_Final.xlsx"))
 
+
+###################### 
+# Adding cluster bqsed on biomarkers data
 clusterMatrix<-seuratObj@meta.data
-umapTable<-as.data.frame(seuratObj[['umap']]@cell.embeddings, stringsAsFactors = F)
+umapTable<-as.data.frame(seuratObj[['harmony_umap']]@cell.embeddings, stringsAsFactors = F)
 #####################################""
 # Cluster 33
-umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., UMAP_1 > 0)
+umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., harmonyumap_1 > 0)
 wantedCells<-intersect(umapSlice$cell, WhichCells(seuratObj, idents = 12))
 colorSomeCells(clusterMatrix, umapTable, wantedCells)
 
 seuratObj<-SetIdent(object = seuratObj, cells = wantedCells, value = 33)
-DimPlot(seuratObj, reduction = "umap", label = T, label.size = 8)
+DimPlot(seuratObj, reduction = "harmony_umap", label = T, label.size = 8)
 
 ######################################################################################
 # Cluster 34
-umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., UMAP_1 > 0)
+umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., harmonyumap_1 > 0)
 wantedCells<-intersect(umapSlice$cell, WhichCells(seuratObj, idents = 28))
 colorSomeCells(clusterMatrix, umapTable, wantedCells)
 
 seuratObj<-SetIdent(object = seuratObj, cells = wantedCells, value = 34)
-DimPlot(seuratObj, reduction = "umap", label = T, label.size = 8)
+DimPlot(seuratObj, reduction = "harmony_umap", label = T, label.size = 8)
 ####################################################################################
 # Cluster 35
-umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., UMAP_2 > 2)
+umapSlice<-umapTable %>% dplyr::mutate('cell'=rownames(.)) %>% dplyr::filter(., harmonyumap_2 > 2)
 wantedCells<-intersect(umapSlice$cell, WhichCells(seuratObj, idents = 28))
 colorSomeCells(clusterMatrix, umapTable, wantedCells)
 
 seuratObj<-SetIdent(object = seuratObj, cells = wantedCells, value = 35)
-DimPlot(seuratObj, reduction = "umap", label = T, label.size = 8)
+DimPlot(seuratObj, reduction = "harmony_umap", label = T, label.size = 8)
+
+saveRDS(SeuratObjVis,"/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_ADT_VIS_Final.rds")
+
+
+
+

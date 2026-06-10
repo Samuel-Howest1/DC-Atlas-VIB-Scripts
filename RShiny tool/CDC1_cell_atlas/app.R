@@ -17,8 +17,10 @@ library(shinyWidgets)
 library(DT)
 library(shinycssloaders)
 ################### Loading Objects #######################################
-SeuratObjT <- readRDS("C:/Users/irc/Desktop/Harmony_Treat_Exp_VIS.rds")
+SeuratObjT <- readRDS("/Users/irc/Desktop/Harmony_Treat_Exp_ADT_Correct_Annot.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
+
+SeuratObjT$seurat_clusters <- seuratObj@active.ident
 Idents(SeuratObjT) <- SeuratObjT$sctype_classification
 ################################################################################
 ##################### Spliting up the data for improved speed #################
