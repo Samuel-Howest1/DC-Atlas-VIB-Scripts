@@ -118,22 +118,22 @@ report_cols <-c(
     "VBO012"
   )
 experiment_map <- c(
-  "Test",
-  "Test",
-  "Final",
-  "Final",
-  "Notch",
-  "LNP_WT",
-  "LNP_eLNPs",
-  "LNP_pIC_LNPs",
-  "LNP_CpG",
-  "LNP_pIC",
-  "LNP_eLNPs",
-  "LNP_pIC_LNPs",
-  "LNP_CpG",
-  "LNP_pIC",
-  "Toxo",
-  "Toxo"
+  "SAM2"   = "LNP_WT",
+  "SAM3"   = "LNP_eLNPs",
+  "SAM05"  = "Final",
+  "SAM06"  = "Notch",
+  "SAM016" = "Final",
+  "VBO004" = "LNP_pIC_LNPs",
+  "VBO005" = "LNP_CpG",
+  "VBO006" = "LNP_pIC",
+  "VBO007" = "LNP_eLNPs",
+  "VBO008" = "LNP_pIC_LNPs",
+  "VBO009" = "LNP_CpG",
+  "VBO010" = "LNP_pIC",
+  "VBO011" = "Toxo",
+  "VBO012" = "Toxo",
+  "JVE008" = "Test",
+  "JVE010" = "Test"
 )
 WT_map <- c(
   "SAM2"   = "WT",
