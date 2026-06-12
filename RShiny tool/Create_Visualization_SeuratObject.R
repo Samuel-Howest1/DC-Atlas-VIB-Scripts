@@ -7,7 +7,7 @@
 library("Seurat")
 
 
-SeuratObjVis <- readRDS("/srv/data/local/samuelg/Output/Harmomy/Object/Harmony_Integration_T_E_ADTV2_Final.rds")
+SeuratObjVis <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Integration_T_E_T_ADTV2_Final.rds")
 
 SeuratObjVis$MULTI_ID_merge <- paste0(sub("GSM_2677817_","",SeuratObjVis$HTO_GUESS),"_",SeuratObjVis$orig.ident)
 
@@ -33,7 +33,6 @@ sapply(
 for (layer in scale_layers) {LayerData(SeuratObjVis[["RNA"]], layer) <- NULL}
 
 
-
-saveRDS(SeuratObjVis,"/srv/data/local/samuelg/Output/Harmomy/Object/Harmony_Treat_Exp_ADT_VIS_Final.rds")
+saveRDS(SeuratObjVis,"/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_Tech_ADT_VIS.rds")
 
 

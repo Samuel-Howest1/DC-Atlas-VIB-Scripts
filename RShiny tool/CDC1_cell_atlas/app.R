@@ -411,7 +411,11 @@ nav_panel(title = "Gene Comparison",
 ##############################################################################
 ############################## Contact #######################################
 nav_panel(title = "Contact", 
-          p("Select gene for feature plot."),
+          h3("Creator Cell Atlas:"),
+          p("Samuel Gundes (intern): samuel.gundes@gmail.com"),
+          h3("Mentor Cell Atlas:"),
+          p("Clint De Nolf"),
+          
           tags$div( class = "input",
           ),
           

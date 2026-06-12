@@ -1,5 +1,5 @@
 
-
+# Finding all biomarkers and fixing the last annotation
 
 library("Seurat")
 library("presto") 
@@ -123,14 +123,12 @@ celltype_map <- c(
   "29" = "Early Immature",
   "30" = "Late Mature",
   "31" = "Late Mature",
-  "32" = "Late Mature",
-  "33" = "Early Mature",
-  "34" = "Proliferating cDC1s",
-  "35" = "Late Mature"
+  "32" = "Late Mature"
 )
+cluster <- as.character(Idents(SeuratObjVis))
 
 # Add cell type annotation
-seuratObj$celltype_new <- unname(celltype_map[Idents(seuratObj)])
+SeuratObjVis$celltype_new <- unname(sapply(cluster,function(x) celltype_map[x]))
 
 
-saveRDS(seuratObj,"/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_ADT_Correct_Annot2.rds")
+saveRDS(seuratObj,"/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_ADT_Correct_Annot3.rds")
