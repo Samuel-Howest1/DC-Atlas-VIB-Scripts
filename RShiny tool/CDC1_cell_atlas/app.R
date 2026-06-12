@@ -17,56 +17,56 @@ library(shinyWidgets)
 library(DT)
 library(shinycssloaders)
 ################### Loading Objects #######################################
-SeuratObjT <- readRDS("/Users/irc/Desktop/Harmony_Treat_Exp_ADT_Correct_Annot.rds")
+SeuratObjT <- readRDS("/Users/irc/Desktop/Interschip Bioinformatis 2025-2026/Harmony_Treat_Exp_ADT_Correct_Annot3.rds")
 SeuratObjT <- JoinLayers(SeuratObjT,assay = "RNA")
-SeuratObjT$seurat_clusters <- seuratObj@active.ident
+SeuratObjT$cluster_new <- as.character(Idents(SeuratObjT))
 
 
-# Define cluster -> cell type mapping
-celltype_map <- c(
-  "0" = "Late Mature",
-  "1" = "Late Immature",
-  "2" = "Early Mature",
-  "3" = "Late Mature",
-  "4" = "Late Mature",
-  "5" = "Late Immature",
-  "6" = "Early Mature",
-  "7" = "Late Mature",
-  "8" = "Early Immature",
-  "9" = "Proliferating cDC1s",
-  "10" = "Early Immature",
-  "11" = "Proliferating cDC1s",
-  "12" = "Early Immature",
-  "13" = "Proliferating cDC1s",
-  "14" = "Early Immature",
-  "15" = "Proliferating cDC1s",
-  "16" = "Late Immature",
-  "17" = "Late Immature",
-  "18" = "Late Mature",
-  "19" = "Late Mature",
-  "20" = "Early Mature",
-  "21" = "Late Immature",
-  "22" = "Proliferating cDC1s",
-  "23" = "Early Mature",
-  "24" = "Early Mature",
-  "25" = "cDC1s engulfing RBCs",
-  "26" = "Late Immature",
-  "27" = "Late Mature",
-  "28" = "Early Immature",
-  "29" = "Early Immature",
-  "30" = "Late Mature",
-  "31" = "Late Mature",
-  "32" = "Late Mature",
-  "33" = "Early Mature",
-  "34" = "Proliferating cDC1s",
-  "35" = "Late Mature"
-)
+# # Define cluster -> cell type mapping
+# celltype_map <- c(
+#   "0" = "Late Mature",
+#   "1" = "Late Immature",
+#   "2" = "Early Mature",
+#   "3" = "Late Mature",
+#   "4" = "Late Mature",
+#   "5" = "Late Immature",
+#   "6" = "Early Mature",
+#   "7" = "Late Mature",
+#   "8" = "Early Immature",
+#   "9" = "Proliferatingtqble cDC1s",
+#   "10" = "Early Immature",
+#   "11" = "Proliferating cDC1s",
+#   "12" = "Early Immature",
+#   "13" = "Proliferating cDC1s",
+#   "14" = "Early Immature",
+#   "15" = "Proliferating cDC1s",
+#   "16" = "Late Immature",
+#   "17" = "Late Immature",
+#   "18" = "Late Mature",
+#   "19" = "Late Mature",
+#   "20" = "Early Mature",
+#   "21" = "Late Immature",
+#   "22" = "Proliferating cDC1s",
+#   "23" = "Early Mature",
+#   "24" = "Early Mature",
+#   "25" = "cDC1s engulfing RBCs",
+#   "26" = "Late Immature",
+#   "27" = "Late Mature",
+#   "28" = "Early Immature",
+#   "29" = "Early Immature",
+#   "30" = "Late Mature",
+#   "31" = "Late Mature",
+#   "32" = "Late Mature",
+#   "33" = "Early Mature",
+#   "34" = "Proliferating cDC1s",
+#   "35" = "Late Mature"
+# )
+# 
+# # Add cell type annotation
+# seurat_obj$celltype_new <- celltype_map[as.character(seurat_obj$cluster_new)]
 
-# Add cell type annotation
-seurat_obj$sctype_classification <- celltype_map[as.character(seurat_obj$seurat_clusters)]
 
-
-Idents(SeuratObjT) <- SeuratObjT$sctype_classification
+Idents(SeuratObjT) <- SeuratObjT$celltype_new
 ################################################################################
 ##################### Spliting up the data for improved speed #################
 
@@ -95,9 +95,9 @@ metadata <- c("celltype","cluster","treatment","experiment","orig.ident")
 
 genes <- rownames(expr)
 ########### Avg and Percentage expression of Genes for Dotplot later ##########
-# avg <- AverageExpression(SeuratObjT,group.by = "sctype_classification",features = genes,layer = "data")$RNA
+# avg <- AverageExpression(SeuratObjT,group.by = "celltype_new",features = genes,layer = "data")$RNA
 # 
-# pct_group <- meta$sctype_classification
+# pct_group <- meta$celltype_new
 # pct_exp <- function(gene, expr, pct_group) {
 #   tapply(expr[gene, ] > 0, pct_group, mean) * 100
 #   }
@@ -177,9 +177,9 @@ tbl <- data.frame(
   ),
   check.names = FALSE)
 # Fill rows
-# tbl[1, report_cols] <- report_cols                      # Orig.idents
-# tbl[2, report_cols] <- WT_map[report_cols]             # Treatment
-# tbl[3, report_cols] <- experiment_map[report_cols]     # Experiment
+tbl[1, report_cols] <- report_cols                      # Orig.idents
+tbl[2, report_cols] <- WT_map[report_cols]             # Treatment
+tbl[3, report_cols] <- experiment_map[report_cols]     # Experiment
 ##############################################################################
 ############## Base of UI ###################################################
 ui <-  page_navbar(theme = shinytheme("united"),
@@ -472,7 +472,7 @@ server <- function(input, output,session) {
       UMAP_2 = umap[, "harmonyumap_2"]
     )
     df$expr <- as.numeric(expr[input$gene, ])
-    df$celltype <- meta$sctype_classification
+    df$celltype <- meta$celltype_new
 
     # To male Hover Text of cells
     df$hover <- paste(
@@ -508,7 +508,7 @@ server <- function(input, output,session) {
     
     df_violin <- data.frame(
       expr= as.numeric(expr[input$gene,]),
-      celltype = meta$sctype_classification
+      celltype = meta$celltype_new
     )
     
     ggplot(df_violin, aes(x = celltype, y= expr,fill = celltype)) +
@@ -528,7 +528,7 @@ server <- function(input, output,session) {
   #   DotPlot(
   #     SeuratObjT,
   #     features = genes,
-  #     group.by = "sctype_classification"
+  #     group.by = "celltype_new"
   #   )
   
   output$DimPlotMeta <- renderPlot({
@@ -540,8 +540,8 @@ server <- function(input, output,session) {
       UMAP_2 = umap[, "harmonyumap_2"]
     )
 
-    df$celltype <- meta$sctype_classification
-    df$cluster <- meta$seurat_clusters
+    df$celltype <- meta$celltype_new
+    df$cluster <- meta$cluster_new
     df$treatment <- meta$treatment
     df$experiment <- meta$experiment
     df$orig.ident <- meta$orig.ident
@@ -582,8 +582,8 @@ server <- function(input, output,session) {
       )
       
       df$expr <- as.numeric(expr[input$meta, ])
-      df$celltype <- meta$sctype_classification
-      df$cluster <- meta$seurat_clusters
+      df$celltype <- meta$celltype_new
+      df$cluster <- meta$cluster_new
       df$treatment <- meta$treatment
       df$experiment <- meta$experiment
       df$orig.ident <- meta$orig.ident
@@ -658,7 +658,7 @@ Complot <-eventReactive(input$start_comp,{
       df <- data.frame(
         gene1 = as.numeric(expr[input$gene_1,]),
         gene2 = as.numeric(expr[input$gene_2,]),
-        color = meta$sctype_classification
+        color = meta$celltype_new
       )
       
       ggplot(df, aes(x = gene1, y= gene2, color=color))+
