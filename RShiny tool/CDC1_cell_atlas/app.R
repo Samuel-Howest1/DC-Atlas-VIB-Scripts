@@ -320,7 +320,7 @@ card(   style = "margin-bottom: 5px;",
   nav_panel(title = "Cell Metadata", 
             tags$div( class = "input",
   layout_columns(
-                      
+    style = "max-width: 1000px; margin: 0 auto;",        
             selectizeInput(
               inputId = "meta",
               label = "Select Gene to analysis",

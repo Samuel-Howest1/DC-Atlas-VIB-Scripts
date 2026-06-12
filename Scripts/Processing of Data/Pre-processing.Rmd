@@ -719,9 +719,7 @@ ExcelMarker
 
 # Markdown note for Datasets
 
-SAM2:
 
-Resolution is kept at 0.7, 0.7 and 0.8 quite similar but starting form 0.9 the amount of clusters increase dramatically. Doublets graph: There are 3 obvious concentration of doublets that have to be removed (left structure, in the valley of the biggest structure and on the border of the top structure. This has to be further confirmed by determining the cell type Mito: No obvious problems ADT: No obvious problems
 
 ## Saving R object
 
